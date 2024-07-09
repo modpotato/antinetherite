@@ -9,7 +9,6 @@ import org.bukkit.event.HandlerList;
 
 import top.modpotato.listeners.CraftListener;
 
-
 public class Main extends JavaPlugin {
     private int delay;
     private int multiplier;

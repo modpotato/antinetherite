@@ -1,4 +1,5 @@
 name: AntiNetherite
+description: Disables Netherite and Netherite crafts
 version: '${project.version}'
 main: top.modpotato.Main
 api-version: '1.20'
