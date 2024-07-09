@@ -16,10 +16,14 @@ The plugin's behavior can be customized in the `config.yml` file:
 anti-netherite:
   # CHECKS
 
-  # Should we check for netherite in the inventory of players?
-  clear: true
+  # Should we clear netherite in the inventory of players?
+  clear: false
   # Should we cancel crafting of netherite items?
   cancel-craft: true
+  # Should we cancel equipping of netherite items?
+  cancel-equip: true
+  # Should we cancel attacking with netherite items?
+  cancel-attack: true
 
   # TIMINGS
   
