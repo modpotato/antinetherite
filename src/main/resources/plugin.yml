@@ -1,0 +1,4 @@
+name: AntiNetherite
+version: '${project.version}'
+main: top.modpotato.Main
+api-version: '1.20'

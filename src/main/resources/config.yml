@@ -1,0 +1,18 @@
+# Netherite removal settings
+anti-netherite:
+  # CHECKS
+
+  # Should we check for netherite in the inventory of players?
+  clear: true
+  # Should we cancel crafting of netherite items?
+  cancel-craft: true
+
+  # TIMINGS
+  
+  # Delay in seconds between each check (assuming you leave multiplier at 20)
+  delay: 1
+  # Multiply the delay by this number to get the actual delay
+  # 20 = 20 ticks = 1 second
+  multiplier: 20
+
+  
