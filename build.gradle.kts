@@ -6,7 +6,7 @@ plugins {
 application.mainClass = "top.modpotato.Main"
 
 group = "top.modpotato"
-version = "0.3"
+version = "0.4"
 
 java {
     toolchain {
