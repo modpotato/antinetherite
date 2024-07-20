@@ -3,11 +3,15 @@ anti-netherite:
   # CHECKS
 
   # Should we clear netherite in the inventory of players?
+  # THIS DOES NOT WORK WITH FOLIA
   clear: false
+
   # Should we cancel crafting of netherite items?
   cancel-craft: true
+
   # Should we cancel equipping of netherite items?
   cancel-equip: true
+  
   # Should we cancel attacking with netherite items?
   cancel-attack: true
 
