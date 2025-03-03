@@ -28,6 +28,7 @@ jobs:
         VERSION="0.$(echo $COMMIT_COUNT)"
         echo "New version: $VERSION"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
         sed -i "s/version = \"[^\"]*\"/version = \"$VERSION\"/" build.gradle.kts
     
     - name: Make gradlew executable
@@ -46,10 +47,10 @@ jobs:
       if: github.event_name != 'pull_request'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ env.VERSION }}
-        name: Release v${{ env.VERSION }}
+        name: Release ${{ env.COMMIT_COUNT }}
         files: build/libs/*.jar
         generate_release_notes: true
         prerelease: true
+        tag_name: release-${{ github.run_number }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

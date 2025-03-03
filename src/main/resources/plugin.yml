@@ -1,10 +1,10 @@
-name: AntiNetherite
-description: Disables Netherite and Netherite crafts in your Minecraft server
-version: '${project.version}'
+name: ${name}
+description: ${description}
+version: '${version}'
 main: top.modpotato.Main
 api-version: '1.20'
 folia-supported: true
-authors: [ModPotato]
+authors: [${author}]
 
 commands:
   antinetherite:
