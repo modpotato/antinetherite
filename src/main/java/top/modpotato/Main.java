@@ -1,51 +1,65 @@
 package top.modpotato;
 
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 
 import top.modpotato.listeners.AttackListener;
 import top.modpotato.listeners.CraftListener;
+import top.modpotato.listeners.DropListener;
 import top.modpotato.listeners.EquipListener;
+import top.modpotato.listeners.InventoryMoveListener;
+import top.modpotato.listeners.MiningListener;
+import top.modpotato.listeners.PickupListener;
 import top.modpotato.commands.AntiNetheriteCommand;
+import top.modpotato.config.Config;
+import top.modpotato.scheduler.NetheriteRemover;
+import top.modpotato.util.DebrisStorage;
+import top.modpotato.util.NetheriteDetector;
 
 /**
  * Main plugin class for AntiNetherite
  */
 public class Main extends JavaPlugin {
-    private int delay;
-    private int multiplier;
-    private boolean clearNetherite = false;
-    private boolean cancelCraft = false;
-    private boolean cancelEquip = false;
-    private boolean cancelAttack = false;
-
-    private BukkitRunnable removeNetheriteTask;
+    private Config config;
+    private NetheriteRemover netheriteRemover;
+    private NetheriteDetector netheriteDetector;
+    private DebrisStorage debrisStorage;
+    
     private CraftListener craftListener;
     private EquipListener equipListener;
     private AttackListener attackListener;
+    private PickupListener pickupListener;
+    private DropListener dropListener;
+    private InventoryMoveListener inventoryMoveListener;
+    private MiningListener miningListener;
     private boolean isFolia;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        loadConfig();
+        
+        // Initialize config
+        config = new Config(this);
+        
+        // Initialize Netherite detector
+        netheriteDetector = new NetheriteDetector(config);
+        
+        // Initialize debris storage
+        debrisStorage = new DebrisStorage(this);
         
         // Check if running on Folia
         isFolia = checkFolia();
+        getLogger().info("Running on " + (isFolia ? "Folia" : "Bukkit") + " server");
         
-        if (clearNetherite) {
-            if (isFolia) {
-                getLogger().warning("The clear netherite feature is not fully compatible with Folia. Using region-aware scheduler instead.");
-                scheduleRemoveNetheriteForFolia();
-            } else {
-                scheduleRemoveNetherite();
-            }
+        // Initialize netherite remover
+        netheriteRemover = new NetheriteRemover(this, isFolia, netheriteDetector);
+        
+        // Start tasks based on config
+        if (config.isClearNetherite()) {
+            netheriteRemover.start(config.getDelayTicks());
         }
 
+        // Register listeners
         registerListeners();
         
         // Register command
@@ -56,45 +70,59 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (removeNetheriteTask != null) {
-            removeNetheriteTask.cancel();
+        // Stop tasks
+        if (netheriteRemover != null) {
+            netheriteRemover.stop();
         }
         
+        // Restore Ancient Debris if needed
+        if (miningListener != null && (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad())) {
+            miningListener.restoreAllDebris();
+        }
+        
+        // Unregister listeners
         unregisterListeners();
         
         getLogger().info("AntiNetherite has been disabled!");
     }
     
     /**
-     * Loads configuration values from config.yml
-     */
-    public void loadConfig() {
-        reloadConfig();
-        delay = getConfig().getInt("anti-netherite.delay", 1);
-        multiplier = getConfig().getInt("anti-netherite.multiplier", 20);
-        clearNetherite = getConfig().getBoolean("anti-netherite.clear", false);
-        cancelCraft = getConfig().getBoolean("anti-netherite.cancel-craft", true);
-        cancelEquip = getConfig().getBoolean("anti-netherite.cancel-equip", true);
-        cancelAttack = getConfig().getBoolean("anti-netherite.cancel-attack", true);
-    }
-    
-    /**
      * Registers event listeners based on configuration
      */
     private void registerListeners() {
-        if (cancelCraft) {
-            craftListener = new CraftListener();
+        if (config.isCancelCraft()) {
+            craftListener = new CraftListener(netheriteDetector);
             getServer().getPluginManager().registerEvents(craftListener, this);
         }
 
-        if (cancelEquip) {
-            equipListener = new EquipListener();
+        if (config.isCancelEquip()) {
+            equipListener = new EquipListener(netheriteDetector);
             getServer().getPluginManager().registerEvents(equipListener, this);
         }
 
-        if (cancelAttack) {
-            attackListener = new AttackListener();
+        if (config.isCancelAttack()) {
+            attackListener = new AttackListener(netheriteDetector);
             getServer().getPluginManager().registerEvents(attackListener, this);
+        }
+        
+        if (config.isCancelPickup()) {
+            pickupListener = new PickupListener(netheriteDetector);
+            getServer().getPluginManager().registerEvents(pickupListener, this);
+        }
+        
+        dropListener = new DropListener(config.isRemoveDropped(), netheriteDetector);
+        getServer().getPluginManager().registerEvents(dropListener, this);
+        
+        if (config.isCancelInventoryMove()) {
+            inventoryMoveListener = new InventoryMoveListener(netheriteDetector);
+            getServer().getPluginManager().registerEvents(inventoryMoveListener, this);
+        }
+        
+        // Register mining listener if either ancient debris replacement option is enabled
+        if (config.isReplaceAncientDebris() || config.isReplaceOnChunkLoad()) {
+            miningListener = new MiningListener(netheriteDetector, debrisStorage, 
+                                               config.isReplaceAncientDebris(), config.isReplaceOnChunkLoad());
+            getServer().getPluginManager().registerEvents(miningListener, this);
         }
     }
     
@@ -116,6 +144,26 @@ public class Main extends JavaPlugin {
             HandlerList.unregisterAll(attackListener);
             attackListener = null;
         }
+        
+        if (pickupListener != null) {
+            HandlerList.unregisterAll(pickupListener);
+            pickupListener = null;
+        }
+        
+        if (dropListener != null) {
+            HandlerList.unregisterAll(dropListener);
+            dropListener = null;
+        }
+        
+        if (inventoryMoveListener != null) {
+            HandlerList.unregisterAll(inventoryMoveListener);
+            inventoryMoveListener = null;
+        }
+        
+        if (miningListener != null) {
+            HandlerList.unregisterAll(miningListener);
+            miningListener = null;
+        }
     }
     
     /**
@@ -130,71 +178,29 @@ public class Main extends JavaPlugin {
             return false;
         }
     }
-
-    /**
-     * Schedules the task to remove Netherite items from player inventories (Bukkit scheduler)
-     */
-    private void scheduleRemoveNetherite() {
-        removeNetheriteTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                    removeNetheriteFromPlayer(player);
-                }
-            }
-        };
-        removeNetheriteTask.runTaskTimer(this, 0L, delay * multiplier);
-    }
     
     /**
-     * Schedules the task to remove Netherite items from player inventories (Folia-compatible)
-     */
-    private void scheduleRemoveNetheriteForFolia() {
-        // For Folia, we need to use the region-aware scheduler
-        Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, task -> {
-            for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                // Schedule task in the player's region
-                player.getScheduler().run(this, scheduledTask -> removeNetheriteFromPlayer(player), null);
-            }
-        }, 0L, delay * multiplier);
-    }
-    
-    /**
-     * Removes Netherite items from a player's inventory
-     * @param player The player to check
-     */
-    private void removeNetheriteFromPlayer(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType().name().contains("NETHERITE")) {
-                player.getInventory().remove(item);
-            }
-        }
-    }
-    
-    /**
-     * Updates a specific configuration value
+     * Updates a specific configuration value and applies changes
      * @param path The configuration path
      * @param value The new value
      */
     public void updateConfig(String path, Object value) {
-        getConfig().set(path, value);
-        saveConfig();
-        loadConfig();
+        config.update(path, value);
+        
+        // Reload Netherite detector
+        if (netheriteDetector != null) {
+            netheriteDetector.reloadNetheriteItems();
+        }
         
         // Re-register listeners and tasks based on new config
         unregisterListeners();
         
-        if (removeNetheriteTask != null) {
-            removeNetheriteTask.cancel();
-            removeNetheriteTask = null;
+        if (netheriteRemover != null) {
+            netheriteRemover.stop();
         }
         
-        if (clearNetherite) {
-            if (isFolia) {
-                scheduleRemoveNetheriteForFolia();
-            } else {
-                scheduleRemoveNetherite();
-            }
+        if (config.isClearNetherite()) {
+            netheriteRemover.start(config.getDelayTicks());
         }
         
         registerListeners();
@@ -206,6 +212,61 @@ public class Main extends JavaPlugin {
      * @return The configuration value
      */
     public Object getConfigValue(String path) {
-        return getConfig().get(path);
+        return config.getValue(path);
+    }
+    
+    /**
+     * Reloads the plugin configuration
+     */
+    public void reloadPluginConfig() {
+        boolean oldReplaceAncientDebris = config.isReplaceAncientDebris();
+        boolean oldReplaceOnChunkLoad = config.isReplaceOnChunkLoad();
+        
+        // Reload config
+        config.reload();
+        
+        // Reload Netherite detector
+        netheriteDetector.reloadNetheriteItems();
+        
+        // Stop tasks
+        if (netheriteRemover != null) {
+            netheriteRemover.stop();
+        }
+        
+        // Restore Ancient Debris if needed
+        if (miningListener != null && 
+            (oldReplaceAncientDebris || oldReplaceOnChunkLoad) && 
+            (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad())) {
+            miningListener.restoreAllDebris();
+        }
+        
+        // Unregister listeners
+        unregisterListeners();
+        
+        // Register listeners again
+        registerListeners();
+        
+        // Start tasks based on config
+        if (config.isClearNetherite()) {
+            netheriteRemover.start(config.getDelayTicks());
+        }
+        
+        getLogger().info("AntiNetherite configuration reloaded.");
+    }
+    
+    /**
+     * Gets the Netherite detector
+     * @return The Netherite detector
+     */
+    public NetheriteDetector getNetheriteDetector() {
+        return netheriteDetector;
+    }
+    
+    /**
+     * Gets the debris storage
+     * @return The debris storage
+     */
+    public DebrisStorage getDebrisStorage() {
+        return debrisStorage;
     }
 }

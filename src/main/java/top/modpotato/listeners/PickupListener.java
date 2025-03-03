@@ -3,8 +3,7 @@ package top.modpotato.listeners;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType.SlotType;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.Component;
@@ -12,30 +11,30 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import top.modpotato.util.NetheriteDetector;
 
 /**
- * Prevents equipping Netherite armor
+ * Prevents players from picking up Netherite items
  */
-public class EquipListener implements Listener {
+public class PickupListener implements Listener {
     private final NetheriteDetector netheriteDetector;
     
     /**
-     * Creates a new EquipListener
+     * Creates a new PickupListener
      * @param netheriteDetector The Netherite detector
      */
-    public EquipListener(NetheriteDetector netheriteDetector) {
+    public PickupListener(NetheriteDetector netheriteDetector) {
         this.netheriteDetector = netheriteDetector;
     }
     
     @EventHandler
-    public void onEquip(InventoryClickEvent event) {
-        if (event.getSlotType() != SlotType.ARMOR) {
+    public void onPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player)) {
             return;
         }
-
-        ItemStack item = event.getCursor();
+        
+        ItemStack item = event.getItem().getItemStack();
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             event.setCancelled(true);
-            Player player = (Player) event.getWhoClicked();
-            player.sendMessage(Component.text("Equipping Netherite armor is not allowed!").color(NamedTextColor.RED));
+            Player player = (Player) event.getEntity();
+            player.sendMessage(Component.text("Picking up Netherite items is not allowed!").color(NamedTextColor.RED));
         }
     }
-}
+} 

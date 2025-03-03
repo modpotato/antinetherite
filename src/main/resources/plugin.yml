@@ -1,14 +1,18 @@
 name: AntiNetherite
-description: Disables Netherite and Netherite crafts
+description: Disables Netherite and Netherite crafts in your Minecraft server
 version: '${project.version}'
 main: top.modpotato.Main
 api-version: '1.20'
 folia-supported: true
+authors: [ModPotato]
 
 commands:
   antinetherite:
     description: Manage AntiNetherite plugin settings
-    usage: /antinetherite [reload|get|set] [setting] [value]
+    usage: |
+      /<command> reload - Reload the configuration
+      /<command> get <setting> - Get a configuration value
+      /<command> set <setting> <value> - Set a configuration value
     permission: antinetherite.manage
     aliases: [an]
 

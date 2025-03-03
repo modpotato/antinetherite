@@ -1,24 +1,83 @@
+# AntiNetherite Configuration
+# 
+# This plugin prevents the use of Netherite items in your server
+# It is fully compatible with both regular Bukkit/Spigot/Paper servers and Folia
+
 # Netherite removal settings
 anti-netherite:
   # CHECKS
 
   # Should we clear netherite in the inventory of players?
-  # THIS DOES NOT WORK WITH FOLIA
+  # This feature is compatible with Folia using region-aware schedulers
   clear: false
 
   # Should we cancel crafting of netherite items?
+  # This prevents players from crafting any items containing netherite
   cancel-craft: true
 
   # Should we cancel equipping of netherite items?
+  # This prevents players from equipping netherite armor
   cancel-equip: true
   
   # Should we cancel attacking with netherite items?
+  # This prevents players from attacking with netherite weapons
   cancel-attack: true
+
+  # Should we cancel picking up netherite items?
+  # This prevents players from picking up netherite items from the ground
+  cancel-pickup: true
+  
+  # Should we remove netherite items when dropped?
+  # This removes netherite items when players drop them
+  remove-dropped: true
+  
+  # Should we cancel moving netherite items in inventories?
+  # This prevents players from moving netherite items in their inventory
+  cancel-inventory-move: true
+  
+  # ANCIENT DEBRIS SETTINGS
+  
+  # Should we replace Ancient Debris with Netherrack when mined?
+  # This prevents players from obtaining Ancient Debris
+  replace-ancient-debris: true
+  
+  # Should we replace Ancient Debris with Netherrack when chunks are loaded?
+  # This prevents Ancient Debris from generating in the world
+  replace-on-chunk-load: true
+
+  # DETECTION SETTINGS
+  
+  # Settings for detecting Netherite items
+  detection:
+    # Should we use name matching to detect Netherite items?
+    # If true, any item with a name containing "NETHERITE" will be considered a Netherite item
+    # If false, only items in the list below will be considered Netherite items
+    use-name-matching: true
+    
+    # List of items to consider as Netherite items
+    # These are Bukkit Material enum names
+    # You can add custom items here if needed
+    items:
+      - NETHERITE_SWORD
+      - NETHERITE_PICKAXE
+      - NETHERITE_AXE
+      - NETHERITE_SHOVEL
+      - NETHERITE_HOE
+      - NETHERITE_HELMET
+      - NETHERITE_CHESTPLATE
+      - NETHERITE_LEGGINGS
+      - NETHERITE_BOOTS
+      - NETHERITE_BLOCK
+      - NETHERITE_INGOT
+      - NETHERITE_SCRAP
 
   # TIMINGS
   
-  # Delay in seconds between each check (assuming you leave multiplier at 20)
+  # Delay in seconds between each inventory check
+  # Higher values reduce server load but may allow players to keep netherite items longer
   delay: 1
-  # Multiply the delay by this number to get the actual delay
-  # 20 = 20 ticks = 1 second
+  
+  # Multiply the delay by this number to get the actual delay in ticks
+  # 20 ticks = 1 second, so the default is 1 second between checks
+  # This is used for both Bukkit and Folia schedulers
   multiplier: 20
