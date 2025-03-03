@@ -92,6 +92,30 @@ anti-netherite:
     max-replacements-per-chunk: 50
   
   # ==============================
+  # ADVANCED SETTINGS
+  # ==============================
+  
+  advanced:
+    # Maximum number of Ancient Debris locations to store per world
+    # Higher values use more memory but allow tracking more replaced blocks
+    # Lower values use less memory but may limit the number of blocks that can be restored
+    max-locations-per-world: 10000
+    
+    # Cooldown in seconds between command executions
+    # This prevents command spam and potential performance issues
+    command-cooldown-seconds: 5
+    
+    # Should we log Ancient Debris replacements to the console?
+    # If true, a message will be logged each time Ancient Debris is replaced
+    # If false, only summary messages will be logged
+    log-debris-replacements: true
+    
+    # Should we log Netherite item removals from inventories?
+    # If true, a message will be logged each time Netherite items are removed
+    # If false, only summary messages will be logged
+    log-inventory-removals: true
+  
+  # ==============================
   # DETECTION SETTINGS
   # ==============================
   

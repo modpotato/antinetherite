@@ -56,7 +56,7 @@ public class Main extends JavaPlugin {
             getLogger().info("Running on " + (isFolia ? "Folia" : "Bukkit") + " server");
             
             // Initialize netherite remover
-            netheriteRemover = new NetheriteRemover(this, isFolia, netheriteDetector);
+            netheriteRemover = new NetheriteRemover(this, isFolia, netheriteDetector, config);
             
             // Start tasks based on config
             if (config.isClearNetherite()) {

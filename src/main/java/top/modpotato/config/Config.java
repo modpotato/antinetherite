@@ -37,6 +37,12 @@ public class Config {
     private boolean restoreDebrisOnConfigChange;
     private int maxReplacementsPerChunk;
     
+    // Advanced settings
+    private int maxLocationsPerWorld;
+    private int commandCooldownSeconds;
+    private boolean logDebrisReplacements;
+    private boolean logInventoryRemovals;
+    
     /**
      * Creates a new Config instance
      * @param plugin The plugin instance
@@ -80,6 +86,12 @@ public class Config {
         restoreDebrisOnDisable = config.getBoolean("anti-netherite.performance.restore-debris-on-disable", false);
         restoreDebrisOnConfigChange = config.getBoolean("anti-netherite.performance.restore-debris-on-config-change", false);
         maxReplacementsPerChunk = config.getInt("anti-netherite.performance.max-replacements-per-chunk", 50);
+        
+        // Load advanced settings
+        maxLocationsPerWorld = config.getInt("anti-netherite.advanced.max-locations-per-world", 10000);
+        commandCooldownSeconds = config.getInt("anti-netherite.advanced.command-cooldown-seconds", 5);
+        logDebrisReplacements = config.getBoolean("anti-netherite.advanced.log-debris-replacements", true);
+        logInventoryRemovals = config.getBoolean("anti-netherite.advanced.log-inventory-removals", true);
         
         // Load Netherite detection settings
         useNameMatching = config.getBoolean("anti-netherite.detection.use-name-matching", true);
@@ -242,4 +254,36 @@ public class Config {
     public boolean isEnsureChunksLoaded() {
         return ensureChunksLoaded;
     }
-} 
+    
+    /**
+     * Gets the maximum number of locations to store per world
+     * @return The maximum number of locations per world
+     */
+    public int getMaxLocationsPerWorld() {
+        return maxLocationsPerWorld;
+    }
+    
+    /**
+     * Gets the command cooldown in seconds
+     * @return The command cooldown in seconds
+     */
+    public int getCommandCooldownSeconds() {
+        return commandCooldownSeconds;
+    }
+    
+    /**
+     * Gets whether to log debris replacements
+     * @return true if logging debris replacements, false otherwise
+     */
+    public boolean isLogDebrisReplacements() {
+        return logDebrisReplacements;
+    }
+    
+    /**
+     * Gets whether to log inventory removals
+     * @return true if logging inventory removals, false otherwise
+     */
+    public boolean isLogInventoryRemovals() {
+        return logInventoryRemovals;
+    }
+}

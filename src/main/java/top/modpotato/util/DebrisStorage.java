@@ -35,9 +35,6 @@ public class DebrisStorage {
     // Track if storage is currently being saved to prevent concurrent modifications
     private boolean isSaving = false;
     
-    // Maximum number of locations to store per world to prevent memory issues
-    private static final int MAX_LOCATIONS_PER_WORLD = 10000;
-    
     /**
      * Creates a new DebrisStorage instance
      * @param plugin The plugin instance
@@ -78,10 +75,11 @@ public class DebrisStorage {
                     List<String> locations = storage.getStringList(worldUUID);
                     
                     // Limit the number of locations to prevent memory issues
-                    if (locations.size() > MAX_LOCATIONS_PER_WORLD) {
+                    int maxLocations = config.getMaxLocationsPerWorld();
+                    if (locations.size() > maxLocations) {
                         plugin.getLogger().warning("Too many Ancient Debris locations stored for world " + worldUUID + 
-                                                  ". Limiting to " + MAX_LOCATIONS_PER_WORLD);
-                        locations = locations.subList(0, MAX_LOCATIONS_PER_WORLD);
+                                                  ". Limiting to " + maxLocations);
+                        locations = locations.subList(0, maxLocations);
                     }
                     
                     replacedLocations.put(uuid, new ArrayList<>(locations));
@@ -96,35 +94,48 @@ public class DebrisStorage {
     }
     
     /**
-     * Saves the storage file
+     * Saves the storage file asynchronously
      */
-    public synchronized void saveStorage() {
+    public void saveStorageAsync() {
         if (isSaving) {
-            return; // Prevent concurrent saves
+            return;
         }
         
         isSaving = true;
+        
+        // Use the configurable async task delay
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                saveStorage();
+            } finally {
+                isSaving = false;
+            }
+        });
+    }
+    
+    /**
+     * Saves the storage file
+     */
+    public synchronized void saveStorage() {
+        if (plugin.isShuttingDown()) {
+            return;
+        }
+        
         try {
-            // Clear existing data
+            // Clear the storage file
             for (String key : storage.getKeys(false)) {
                 storage.set(key, null);
             }
             
-            // Save replaced locations to storage
+            // Save all replaced locations
             for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
                 storage.set(entry.getKey().toString(), entry.getValue());
             }
             
-            try {
-                storage.save(storageFile);
-                plugin.getLogger().fine("Saved " + getTotalLocationsCount() + " Ancient Debris locations to storage");
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not save debris_storage.yml", e);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving debris_storage.yml", e);
-        } finally {
-            isSaving = false;
+            // Save the file
+            storage.save(storageFile);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not save debris_storage.yml", e);
         }
     }
     
@@ -134,31 +145,36 @@ public class DebrisStorage {
      * @return true if the location was added, false otherwise
      */
     public boolean addLocation(Location location) {
-        if (location == null || location.getWorld() == null) {
+        if (location == null) {
             return false;
         }
         
         UUID worldUUID = location.getWorld().getUID();
-        String locString = serializeLocation(location);
+        String locationString = serializeLocation(location);
+        
+        // Get or create the list for this world
+        List<String> locations = replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>());
         
         // Check if we've reached the maximum number of locations for this world
-        List<String> worldLocations = replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>());
-        if (worldLocations.size() >= MAX_LOCATIONS_PER_WORLD) {
+        if (locations.size() >= config.getMaxLocationsPerWorld()) {
             plugin.getLogger().warning("Maximum number of Ancient Debris locations reached for world " + 
-                                      location.getWorld().getName() + ". Not storing any more locations.");
+                                      location.getWorld().getName() + ". Not adding more locations.");
             return false;
         }
         
-        // Check if the location is already stored
-        if (worldLocations.contains(locString)) {
-            return false;
+        // Add the location if it doesn't already exist
+        if (!locations.contains(locationString)) {
+            locations.add(locationString);
+            
+            // Save the storage periodically
+            if (locations.size() % 100 == 0) {
+                saveStorageAsync();
+            }
+            
+            return true;
         }
         
-        worldLocations.add(locString);
-        
-        // Schedule async save to prevent lag
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::saveStorage);
-        return true;
+        return false;
     }
     
     /**

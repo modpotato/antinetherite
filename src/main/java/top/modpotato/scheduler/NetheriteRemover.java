@@ -3,112 +3,211 @@ package top.modpotato.scheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import top.modpotato.Main;
+import top.modpotato.config.Config;
 import top.modpotato.util.NetheriteDetector;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+
 /**
- * Handles the scheduling of netherite removal tasks
- * with compatibility for both Bukkit and Folia
+ * Scheduler for removing Netherite items from player inventories
  */
 public class NetheriteRemover {
     private final Main plugin;
-    private BukkitTask bukkitTask;
-    private Object foliaTask;
     private final boolean isFolia;
     private final NetheriteDetector netheriteDetector;
+    private final Logger logger;
+    private final Config config;
+    
+    // Task references for both Bukkit and Folia
+    private BukkitTask bukkitTask;
+    private List<ScheduledTask> foliaTasks;
     
     /**
-     * Creates a new NetheriteRemover instance
+     * Creates a new NetheriteRemover
      * @param plugin The plugin instance
-     * @param isFolia Whether the server is running Folia
+     * @param isFolia Whether the server is running on Folia
      * @param netheriteDetector The Netherite detector
+     * @param config The plugin configuration
      */
-    public NetheriteRemover(Main plugin, boolean isFolia, NetheriteDetector netheriteDetector) {
+    public NetheriteRemover(Main plugin, boolean isFolia, NetheriteDetector netheriteDetector, Config config) {
         this.plugin = plugin;
         this.isFolia = isFolia;
         this.netheriteDetector = netheriteDetector;
+        this.logger = plugin.getLogger();
+        this.config = config;
+        this.foliaTasks = new ArrayList<>();
     }
     
     /**
-     * Starts the netherite removal task
-     * @param delayTicks The delay between checks in ticks
+     * Starts the Netherite removal task
+     * @param delay The delay between checks in ticks
      */
-    public void start(int delayTicks) {
-        stop(); // Stop any existing task
+    public void start(int delay) {
+        stop(); // Stop any existing tasks
         
         if (isFolia) {
-            startFoliaTask(delayTicks);
+            startFoliaTask(delay);
         } else {
-            startBukkitTask(delayTicks);
+            startBukkitTask(delay);
         }
     }
     
     /**
-     * Stops the netherite removal task
+     * Stops the Netherite removal task
      */
     public void stop() {
+        if (isFolia) {
+            stopFoliaTasks();
+        } else {
+            stopBukkitTask();
+        }
+    }
+    
+    /**
+     * Starts the Netherite removal task using Bukkit scheduler
+     * @param delay The delay between checks in ticks
+     */
+    private void startBukkitTask(int delay) {
+        bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            AtomicInteger removedCount = new AtomicInteger(0);
+            
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                checkPlayerInventory(player, removedCount);
+            }
+            
+            if (removedCount.get() > 0 && config.isLogInventoryRemovals()) {
+                logger.info("Removed " + removedCount.get() + " Netherite items from player inventories");
+            }
+        }, delay, delay);
+    }
+    
+    /**
+     * Stops the Netherite removal task using Bukkit scheduler
+     */
+    private void stopBukkitTask() {
         if (bukkitTask != null) {
             bukkitTask.cancel();
             bukkitTask = null;
         }
+    }
+    
+    /**
+     * Starts the Netherite removal task using Folia scheduler
+     * @param delay The delay between checks in ticks
+     */
+    private void startFoliaTask(int delay) {
+        foliaTasks = new ArrayList<>();
         
-        if (foliaTask != null) {
-            try {
-                // Use reflection to call cancel() on the Folia task
-                foliaTask.getClass().getMethod("cancel").invoke(foliaTask);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to cancel Folia task: " + e.getMessage());
-            }
-            foliaTask = null;
+        // for Folia, we need to schedule a task for each player
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            schedulePlayerTask(player, delay);
         }
-    }
-    
-    /**
-     * Starts a Bukkit-based task
-     * @param delayTicks The delay between checks in ticks
-     */
-    private void startBukkitTask(int delayTicks) {
-        bukkitTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                    removeNetheriteFromPlayer(player);
+        
+        // schedule a global task to handle new players
+        ScheduledTask globalTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                // check if this player already has a task
+                for (ScheduledTask playerTask : foliaTasks) {
+                    // assume playerTask is cancelled if the player is offline
+                    if (playerTask.isCancelled()) {
+                        foliaTasks.remove(playerTask);
+                    }
                 }
+                
+                // schedule a new task for this player
+                schedulePlayerTask(player, delay);
             }
-        }.runTaskTimer(plugin, 0L, delayTicks);
+        }, 1, delay);
+        
+        foliaTasks.add(globalTask);
     }
     
     /**
-     * Starts a Folia-compatible task using region-aware schedulers
-     * @param delayTicks The delay between checks in ticks
+     * Schedules a task for a specific player using Folia scheduler
+     * @param player The player to schedule for
+     * @param delay The delay between checks in ticks
      */
-    private void startFoliaTask(int delayTicks) {
-        // Use Folia's global region scheduler to periodically check all players
-        try {
-            foliaTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> {
-                for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                    // Schedule task in the player's region to avoid cross-region operations
-                    player.getScheduler().run(plugin, playerTask -> 
-                        removeNetheriteFromPlayer(player), null);
-                }
-            }, 0L, delayTicks);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to start Folia task: " + e.getMessage());
-            plugin.getLogger().severe("This may indicate an incompatibility with the current Folia version.");
-        }
+    private void schedulePlayerTask(Player player, int delay) {
+        ScheduledTask task = player.getScheduler().runAtFixedRate(plugin, (scheduledTask) -> {
+            AtomicInteger removedCount = new AtomicInteger(0);
+            checkPlayerInventory(player, removedCount);
+            
+            if (removedCount.get() > 0 && config.isLogInventoryRemovals()) {
+                logger.info("Removed " + removedCount.get() + " Netherite items from " + player.getName() + "'s inventory");
+            }
+            
+            // if the player is offline, cancel this task
+            if (!player.isOnline()) {
+                scheduledTask.cancel();
+                foliaTasks.remove(scheduledTask);
+            }
+        }, null, 1, delay);
+        
+        foliaTasks.add(task);
     }
     
     /**
-     * Removes Netherite items from a player's inventory
+     * Stops all Folia tasks
+     */
+    private void stopFoliaTasks() {
+        for (ScheduledTask task : foliaTasks) {
+            task.cancel();
+        }
+        foliaTasks.clear();
+    }
+    
+    /**
+     * Checks a player's inventory for Netherite items and removes them
      * @param player The player to check
+     * @param removedCount Counter for removed items
      */
-    private void removeNetheriteFromPlayer(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
+    private void checkPlayerInventory(Player player, AtomicInteger removedCount) {
+        // Skip players with permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
+        // Check main inventory
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
             if (item != null && netheriteDetector.isNetheriteItem(item)) {
-                player.getInventory().remove(item);
+                player.getInventory().setItem(i, null);
+                removedCount.incrementAndGet();
             }
+        }
+        
+        // Check armor slots
+        for (ItemStack item : player.getInventory().getArmorContents()) {
+            if (item != null && netheriteDetector.isNetheriteItem(item)) {
+                // We can't directly modify the armor contents array, so we need to set each slot individually
+                if (item.equals(player.getInventory().getHelmet())) {
+                    player.getInventory().setHelmet(null);
+                    removedCount.incrementAndGet();
+                } else if (item.equals(player.getInventory().getChestplate())) {
+                    player.getInventory().setChestplate(null);
+                    removedCount.incrementAndGet();
+                } else if (item.equals(player.getInventory().getLeggings())) {
+                    player.getInventory().setLeggings(null);
+                    removedCount.incrementAndGet();
+                } else if (item.equals(player.getInventory().getBoots())) {
+                    player.getInventory().setBoots(null);
+                    removedCount.incrementAndGet();
+                }
+            }
+        }
+        
+        // Check offhand
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (offhand != null && netheriteDetector.isNetheriteItem(offhand)) {
+            player.getInventory().setItemInOffHand(null);
+            removedCount.incrementAndGet();
         }
     }
 } 

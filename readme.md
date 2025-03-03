@@ -14,6 +14,7 @@ AntiNetherite is a highly configurable Minecraft plugin designed to remove Nethe
 - Prevents moving Netherite items in inventories
 - Replaces Ancient Debris with Netherrack when mined or generated
 - **Performance-Optimized** - Control whether replaced Ancient Debris is restored on plugin disable
+- **Fine-Grained Control** - Advanced settings for memory usage, logging, and more
 - Customizable Netherite item detection
 - Fully compatible with Folia 1.21.4 using region-aware schedulers
 - In-game commands to manage all settings
@@ -118,6 +119,30 @@ anti-netherite:
     max-replacements-per-chunk: 50
   
   # ==============================
+  # ADVANCED SETTINGS
+  # ==============================
+  
+  advanced:
+    # Maximum number of Ancient Debris locations to store per world
+    # Higher values use more memory but allow tracking more replaced blocks
+    # Lower values use less memory but may limit the number of blocks that can be restored
+    max-locations-per-world: 10000
+    
+    # Cooldown in seconds between command executions
+    # This prevents command spam and potential performance issues
+    command-cooldown-seconds: 5
+    
+    # Should we log Ancient Debris replacements to the console?
+    # If true, a message will be logged each time Ancient Debris is replaced
+    # If false, only summary messages will be logged
+    log-debris-replacements: true
+    
+    # Should we log Netherite item removals from inventories?
+    # If true, a message will be logged each time Netherite items are removed
+    # If false, only summary messages will be logged
+    log-inventory-removals: true
+  
+  # ==============================
   # DETECTION SETTINGS
   # ==============================
   
@@ -172,35 +197,41 @@ The plugin provides comprehensive commands to manage all settings in-game withou
 Every setting in the configuration file can be adjusted through these commands. Available settings are organized by category:
 
 **Inventory settings:**
-- `clear` - Enable/disable clearing Netherite from inventories (true/false)
-- `cancel-inventory-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
+- `inventory.clear` - Enable/disable clearing Netherite from inventories (true/false)
+- `inventory.cancel-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
 
 **Interaction settings:**
-- `cancel-craft` - Enable/disable canceling Netherite crafting (true/false)
-- `cancel-equip` - Enable/disable preventing Netherite armor equipping (true/false)
-- `cancel-attack` - Enable/disable preventing attacks with Netherite weapons (true/false)
+- `interaction.cancel-craft` - Enable/disable canceling Netherite crafting (true/false)
+- `interaction.cancel-equip` - Enable/disable preventing Netherite armor equipping (true/false)
+- `interaction.cancel-attack` - Enable/disable preventing attacks with Netherite weapons (true/false)
 
 **Item handling settings:**
-- `cancel-pickup` - Enable/disable preventing picking up Netherite items (true/false)
-- `remove-dropped` - Enable/disable removing dropped Netherite items (true/false)
+- `item-handling.cancel-pickup` - Enable/disable preventing picking up Netherite items (true/false)
+- `item-handling.remove-dropped` - Enable/disable removing dropped Netherite items (true/false)
 
 **Ancient debris settings:**
-- `replace-ancient-debris` - Enable/disable replacing Ancient Debris with Netherrack when mined (true/false)
-- `replace-on-chunk-load` - Enable/disable replacing Ancient Debris with Netherrack when chunks are loaded (true/false)
-- `only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
-- `ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
+- `ancient-debris.replace-when-mined` - Enable/disable replacing Ancient Debris with Netherrack when mined (true/false)
+- `ancient-debris.replace-on-chunk-load` - Enable/disable replacing Ancient Debris with Netherrack when chunks are loaded (true/false)
+- `ancient-debris.only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
+- `ancient-debris.ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
 
 **Performance settings:**
 - `performance.restore-debris-on-disable` - Enable/disable restoring Ancient Debris when the plugin is disabled (true/false)
 - `performance.restore-debris-on-config-change` - Enable/disable restoring Ancient Debris when config changes (true/false)
 - `performance.max-replacements-per-chunk` - Set the maximum number of Ancient Debris replacements per chunk (integer)
 
+**Advanced settings:**
+- `advanced.max-locations-per-world` - Set the maximum number of Ancient Debris locations to store per world (integer)
+- `advanced.command-cooldown-seconds` - Set the cooldown between command executions (integer)
+- `advanced.log-debris-replacements` - Enable/disable logging Ancient Debris replacements (true/false)
+- `advanced.log-inventory-removals` - Enable/disable logging Netherite item removals (true/false)
+
 **Detection settings:**
 - `detection.use-name-matching` - Enable/disable name-based detection of Netherite items (true/false)
 
 **Timing settings:**
-- `delay` - Set the delay between inventory checks (in seconds)
-- `multiplier` - Set the tick multiplier (20 = 1 second)
+- `timing.delay` - Set the delay between inventory checks (in seconds)
+- `timing.multiplier` - Set the tick multiplier (20 = 1 second)
 
 Special commands for managing the Netherite items list:
 - `/antinetherite get detection.items` - List all items considered as Netherite items
@@ -210,6 +241,7 @@ Special commands for managing the Netherite items list:
 ## Permissions
 
 - `antinetherite.manage` - Allows using the `/antinetherite` command (default: op)
+- `antinetherite.bypass` - Allows players to bypass Netherite item removal (default: op)
 
 ## Usage
 
@@ -234,7 +266,7 @@ The plugin can prevent players from obtaining Ancient Debris in two ways, both i
 1. **Mining Prevention**: When a player starts to mine Ancient Debris, it is immediately replaced with Netherrack and no drops are given.
 2. **Generation Prevention**: When new chunks are generated, any Ancient Debris in those chunks is automatically replaced with Netherrack.
 
-These features can be toggled independently using the `replace-when-mined` and `replace-on-chunk-load` settings.
+These features can be toggled independently using the `ancient-debris.replace-when-mined` and `ancient-debris.replace-on-chunk-load` settings.
 
 ### Reversibility
 
@@ -251,6 +283,8 @@ The Ancient Debris replacement system includes several performance optimizations
 
 - **Configurable Restoration**: By default, Ancient Debris is NOT restored when the plugin is disabled or when configuration changes, preventing potential lag spikes
 - **Replacement Limits**: The `performance.max-replacements-per-chunk` setting limits how many blocks can be replaced per chunk to prevent lag
+- **Memory Management**: The `advanced.max-locations-per-world` setting controls how many replaced blocks are tracked per world
+- **Logging Control**: The `advanced.log-debris-replacements` and `advanced.log-inventory-removals` settings allow you to reduce console spam
 - **Selective Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
 - **Chunk Generation Checking**: Can be configured to only process chunks that have already been generated
 - **Chunk Loading Control**: Can be configured to ensure chunks are loaded when replacing or restoring Ancient Debris
@@ -262,7 +296,7 @@ The Ancient Debris replacement system includes several safeguards:
 - **Thread Safety**: Uses thread-safe collections to prevent concurrent modification issues
 - **Error Handling**: Catches and logs exceptions without crashing the plugin
 - **Async Processing**: Performs restoration operations asynchronously to prevent server lag
-- **Cooldown System**: Prevents command spam with a cooldown period
+- **Cooldown System**: Prevents command spam with a configurable cooldown period
 - **World-Specific Restoration**: Allows restoring Ancient Debris in specific worlds
 - **Storage Limits**: Prevents excessive memory usage by limiting the number of stored locations
 - **Persistent Storage**: Saves replaced locations to disk for recovery after server restarts

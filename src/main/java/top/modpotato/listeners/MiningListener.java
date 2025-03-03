@@ -148,7 +148,7 @@ public class MiningListener implements Listener {
                 }
             }
             
-            if (replacementCount > 0) {
+            if (replacementCount > 0 && config.isLogDebrisReplacements()) {
                 logger.info("Replaced " + replacementCount + " Ancient Debris in chunk at " + 
                            event.getChunk().getX() + "," + event.getChunk().getZ() + 
                            " in world " + world.getName());
