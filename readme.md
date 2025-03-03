@@ -1,9 +1,10 @@
 # AntiNetherite Plugin
 
-AntiNetherite is a Minecraft plugin designed to remove Netherite items from player inventories and prevent their crafting, equipping, and attacking with Netherite items.
+AntiNetherite is a highly configurable Minecraft plugin designed to remove Netherite items from player inventories and prevent their crafting, equipping, and attacking with Netherite items. Every aspect of the plugin can be enabled, disabled, or fine-tuned to suit your server's needs.
 
 ## Features
 
+- **Fully Configurable Protection System** - Every feature can be individually enabled or disabled
 - Periodically removes Netherite items from player inventories
 - Cancels the crafting of Netherite items
 - Prevents equipping Netherite armor
@@ -15,12 +16,13 @@ AntiNetherite is a Minecraft plugin designed to remove Netherite items from play
 - Restores replaced Ancient Debris when needed
 - Customizable Netherite item detection
 - Fully compatible with Folia 1.21.4 using region-aware schedulers
-- In-game commands to manage settings
-- Hot reload support
+- In-game commands to manage all settings
+- Hot reload support for configuration changes without server restart
 
 ## Configuration
 
-The plugin's behavior can be customized in the `config.yml` file:
+Every aspect of the plugin's behavior can be customized in the `config.yml` file. All features can be individually enabled or disabled, allowing you to create the exact protection system your server needs:
+
 ```yaml
 # AntiNetherite Configuration
 # 
@@ -139,7 +141,7 @@ anti-netherite:
 
 ## Commands
 
-The plugin provides the following commands:
+The plugin provides comprehensive commands to manage all settings in-game without editing configuration files:
 
 - `/antinetherite reload` - Reload the configuration
 - `/antinetherite restore-debris [world]` - Restore all replaced Ancient Debris (optionally in a specific world)
@@ -147,7 +149,7 @@ The plugin provides the following commands:
 - `/antinetherite get <setting>` - Get a configuration value
 - `/antinetherite set <setting> <value>` - Set a configuration value
 
-Available settings are organized by category:
+Every setting in the configuration file can be adjusted through these commands. Available settings are organized by category:
 
 **Inventory settings:**
 - `clear` - Enable/disable clearing Netherite from inventories (true/false)
@@ -193,7 +195,7 @@ Special commands for managing the Netherite items list:
 
 ## Netherite Item Detection
 
-The plugin provides two ways to detect Netherite items:
+The plugin provides two fully configurable ways to detect Netherite items:
 
 1. **Name Matching**: Any item with a type name containing "NETHERITE" will be considered a Netherite item. This is the default behavior.
 2. **Custom List**: You can define a custom list of items to be considered as Netherite items. This is useful if you want to add custom items or only block specific Netherite items.
@@ -202,12 +204,12 @@ You can toggle between these methods using the `detection.use-name-matching` set
 
 ## Ancient Debris Replacement
 
-The plugin can prevent players from obtaining Ancient Debris in two ways:
+The plugin can prevent players from obtaining Ancient Debris in two ways, both independently configurable:
 
 1. **Mining Prevention**: When a player starts to mine Ancient Debris, it is immediately replaced with Netherrack and no drops are given.
 2. **Generation Prevention**: When new chunks are generated, any Ancient Debris in those chunks is automatically replaced with Netherrack.
 
-These features can be toggled independently using the `replace-ancient-debris` and `replace-on-chunk-load` settings.
+These features can be toggled independently using the `replace-when-mined` and `replace-on-chunk-load` settings.
 
 ### Reversibility
 
@@ -221,7 +223,7 @@ All replaced Ancient Debris will be restored to its original state, but only if 
 
 ### Safeguards
 
-The Ancient Debris replacement system includes several safeguards:
+The Ancient Debris replacement system includes several safeguards, all designed to be configurable:
 
 - **Thread Safety**: Uses thread-safe collections to prevent concurrent modification issues
 - **Error Handling**: Catches and logs exceptions without crashing the plugin
@@ -271,7 +273,7 @@ This plugin uses Gradle for building. It supports both Paper and Folia servers.
 
 1. Clone the repository
 2. Run `./gradlew build` (Linux/macOS) or `gradlew.bat build` (Windows)
-3. The built JAR file will be in `build/libs/antinetherite-1.0.0.jar`
+3. The built JAR file will be in `build/libs/antinetherite-INDEV.jar`
 
 ### Development
 
