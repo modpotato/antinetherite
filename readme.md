@@ -112,7 +112,8 @@ anti-netherite:
 The plugin provides the following commands:
 
 - `/antinetherite reload` - Reload the configuration
-- `/antinetherite restore-debris` - Restore all replaced Ancient Debris
+- `/antinetherite restore-debris [world]` - Restore all replaced Ancient Debris (optionally in a specific world)
+- `/antinetherite debris-info` - Show information about stored Ancient Debris locations
 - `/antinetherite get <setting>` - Get a configuration value
 - `/antinetherite set <setting> <value>` - Set a configuration value
 
@@ -173,6 +174,20 @@ The plugin keeps track of all Ancient Debris that has been replaced with Netherr
 - The `/antinetherite restore-debris` command is used
 
 All replaced Ancient Debris will be restored to its original state, but only if the block is still Netherrack. This ensures that player-built structures are not affected.
+
+### Safeguards
+
+The Ancient Debris replacement system includes several safeguards:
+
+- **Thread Safety**: Uses thread-safe collections to prevent concurrent modification issues
+- **Error Handling**: Catches and logs exceptions without crashing the plugin
+- **Performance Optimization**: Limits the number of replacements per chunk to prevent lag
+- **Async Processing**: Performs restoration operations asynchronously to prevent server lag
+- **Cooldown System**: Prevents command spam with a cooldown period
+- **World-Specific Restoration**: Allows restoring Ancient Debris in specific worlds
+- **Storage Limits**: Prevents excessive memory usage by limiting the number of stored locations
+- **Nether-Only Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
+- **Persistent Storage**: Saves replaced locations to disk for recovery after server restarts
 
 ## Compatibility
 

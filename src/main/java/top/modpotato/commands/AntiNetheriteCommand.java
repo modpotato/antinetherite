@@ -1,5 +1,7 @@
 package top.modpotato.commands;
 
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -30,6 +32,10 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         "detection.use-name-matching", "delay", "multiplier"
     );
     private final List<String> BOOLEAN_VALUES = Arrays.asList("true", "false");
+    
+    // Track when the last restore command was used to prevent spam
+    private long lastRestoreTime = 0;
+    private static final long RESTORE_COOLDOWN = 10000; // 10 seconds cooldown
 
     public AntiNetheriteCommand(Main plugin) {
         this.plugin = plugin;
@@ -54,8 +60,82 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("AntiNetherite configuration reloaded.").color(NamedTextColor.GREEN));
                 return true;
             case "restore-debris":
-                plugin.getDebrisStorage().restoreAllDebris();
-                sender.sendMessage(Component.text("All replaced Ancient Debris has been restored to its original state.").color(NamedTextColor.GREEN));
+                // Check for cooldown to prevent command spam
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastRestoreTime < RESTORE_COOLDOWN) {
+                    sender.sendMessage(Component.text("Please wait before using this command again.").color(NamedTextColor.RED));
+                    return true;
+                }
+                
+                lastRestoreTime = currentTime;
+                
+                if (args.length > 1) {
+                    // World-specific restore
+                    String worldName = args[1];
+                    World world = Bukkit.getWorld(worldName);
+                    
+                    if (world == null) {
+                        sender.sendMessage(Component.text("World not found: " + worldName).color(NamedTextColor.RED));
+                        return true;
+                    }
+                    
+                    sender.sendMessage(Component.text("Restoring Ancient Debris in world " + worldName + "...").color(NamedTextColor.YELLOW));
+                    
+                    // Run the restoration asynchronously to prevent lag
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try {
+                            int count = plugin.getDebrisStorage().restoreDebrisInWorld(world);
+                            
+                            // Send message on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks in world " + worldName + ".").color(NamedTextColor.GREEN));
+                            });
+                        } catch (Exception e) {
+                            // Send error message on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
+                            });
+                            plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    });
+                } else {
+                    // Global restore
+                    sender.sendMessage(Component.text("Restoring all replaced Ancient Debris...").color(NamedTextColor.YELLOW));
+                    
+                    // Run the restoration asynchronously to prevent lag
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try {
+                            int count = plugin.getDebrisStorage().restoreAllDebris();
+                            
+                            // Send message on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks.").color(NamedTextColor.GREEN));
+                            });
+                        } catch (Exception e) {
+                            // Send error message on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
+                            });
+                            plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    });
+                }
+                return true;
+            case "debris-info":
+                // Show information about stored Ancient Debris locations
+                int totalCount = plugin.getDebrisStorage().getTotalLocationsCount();
+                sender.sendMessage(Component.text("Ancient Debris Storage Information:").color(NamedTextColor.GOLD));
+                sender.sendMessage(Component.text("Total stored locations: " + totalCount).color(NamedTextColor.YELLOW));
+                
+                // Show per-world counts
+                for (World world : Bukkit.getWorlds()) {
+                    int worldCount = plugin.getDebrisStorage().getWorldLocationsCount(world);
+                    if (worldCount > 0) {
+                        sender.sendMessage(Component.text("World " + world.getName() + ": " + worldCount + " locations").color(NamedTextColor.YELLOW));
+                    }
+                }
                 return true;
             case "get":
                 if (args.length < 2) {
@@ -169,7 +249,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     private void showHelp(CommandSender sender) {
         sender.sendMessage(Component.text("AntiNetherite Commands:").color(NamedTextColor.GOLD));
         sender.sendMessage(Component.text("/antinetherite reload - Reload the configuration").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("/antinetherite restore-debris - Restore all replaced Ancient Debris").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("/antinetherite restore-debris [world] - Restore all replaced Ancient Debris").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("/antinetherite debris-info - Show information about stored Ancient Debris locations").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite get <setting> - Get a configuration value").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite set <setting> <value> - Set a configuration value").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("Available settings:").color(NamedTextColor.YELLOW));
@@ -192,10 +273,17 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         }
         
         if (args.length == 1) {
-            List<String> commands = Arrays.asList("reload", "restore-debris", "get", "set");
+            List<String> commands = Arrays.asList("reload", "restore-debris", "debris-info", "get", "set");
             StringUtil.copyPartialMatches(args[0], commands, completions);
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("get")) {
+            if (args[0].equalsIgnoreCase("restore-debris")) {
+                // Tab complete for world names
+                List<String> worldNames = new ArrayList<>();
+                for (World world : Bukkit.getWorlds()) {
+                    worldNames.add(world.getName());
+                }
+                StringUtil.copyPartialMatches(args[1], worldNames, completions);
+            } else if (args[0].equalsIgnoreCase("get")) {
                 List<String> allSettings = new ArrayList<>(SETTINGS);
                 allSettings.add("detection.items");
                 StringUtil.copyPartialMatches(args[1], allSettings, completions);

@@ -13,10 +13,10 @@ import top.modpotato.Main;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 /**
@@ -27,8 +27,14 @@ public class DebrisStorage {
     private final File storageFile;
     private FileConfiguration storage;
     
-    // Map of world UUID to list of locations where Ancient Debris was replaced
-    private final Map<UUID, List<String>> replacedLocations = new HashMap<>();
+    // Use ConcurrentHashMap for thread safety
+    private final Map<UUID, List<String>> replacedLocations = new ConcurrentHashMap<>();
+    
+    // Track if storage is currently being saved to prevent concurrent modifications
+    private boolean isSaving = false;
+    
+    // Maximum number of locations to store per world to prevent memory issues
+    private static final int MAX_LOCATIONS_PER_WORLD = 10000;
     
     /**
      * Creates a new DebrisStorage instance
@@ -43,12 +49,17 @@ public class DebrisStorage {
     /**
      * Loads the storage file
      */
-    public void loadStorage() {
+    public synchronized void loadStorage() {
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
+        
         if (!storageFile.exists()) {
             try {
                 storageFile.createNewFile();
             } catch (IOException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not create debris_storage.yml", e);
+                return;
             }
         }
         
@@ -56,39 +67,94 @@ public class DebrisStorage {
         
         // Load replaced locations from storage
         replacedLocations.clear();
-        for (String worldUUID : storage.getKeys(false)) {
-            UUID uuid = UUID.fromString(worldUUID);
-            List<String> locations = storage.getStringList(worldUUID);
-            replacedLocations.put(uuid, locations);
+        try {
+            for (String worldUUID : storage.getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(worldUUID);
+                    List<String> locations = storage.getStringList(worldUUID);
+                    
+                    // Limit the number of locations to prevent memory issues
+                    if (locations.size() > MAX_LOCATIONS_PER_WORLD) {
+                        plugin.getLogger().warning("Too many Ancient Debris locations stored for world " + worldUUID + 
+                                                  ". Limiting to " + MAX_LOCATIONS_PER_WORLD);
+                        locations = locations.subList(0, MAX_LOCATIONS_PER_WORLD);
+                    }
+                    
+                    replacedLocations.put(uuid, new ArrayList<>(locations));
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Invalid UUID in debris_storage.yml: " + worldUUID);
+                }
+            }
+            plugin.getLogger().info("Loaded " + getTotalLocationsCount() + " Ancient Debris locations from storage");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Error loading debris_storage.yml", e);
         }
     }
     
     /**
      * Saves the storage file
      */
-    public void saveStorage() {
-        // Save replaced locations to storage
-        for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
-            storage.set(entry.getKey().toString(), entry.getValue());
+    public synchronized void saveStorage() {
+        if (isSaving) {
+            return; // Prevent concurrent saves
         }
         
+        isSaving = true;
         try {
-            storage.save(storageFile);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save debris_storage.yml", e);
+            // Clear existing data
+            for (String key : storage.getKeys(false)) {
+                storage.set(key, null);
+            }
+            
+            // Save replaced locations to storage
+            for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
+                storage.set(entry.getKey().toString(), entry.getValue());
+            }
+            
+            try {
+                storage.save(storageFile);
+                plugin.getLogger().fine("Saved " + getTotalLocationsCount() + " Ancient Debris locations to storage");
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Could not save debris_storage.yml", e);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Error saving debris_storage.yml", e);
+        } finally {
+            isSaving = false;
         }
     }
     
     /**
      * Adds a location to the storage
      * @param location The location to add
+     * @return true if the location was added, false otherwise
      */
-    public void addLocation(Location location) {
+    public boolean addLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
         UUID worldUUID = location.getWorld().getUID();
         String locString = serializeLocation(location);
         
-        replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>()).add(locString);
-        saveStorage();
+        // Check if we've reached the maximum number of locations for this world
+        List<String> worldLocations = replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>());
+        if (worldLocations.size() >= MAX_LOCATIONS_PER_WORLD) {
+            plugin.getLogger().warning("Maximum number of Ancient Debris locations reached for world " + 
+                                      location.getWorld().getName() + ". Not storing any more locations.");
+            return false;
+        }
+        
+        // Check if the location is already stored
+        if (worldLocations.contains(locString)) {
+            return false;
+        }
+        
+        worldLocations.add(locString);
+        
+        // Schedule async save to prevent lag
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::saveStorage);
+        return true;
     }
     
     /**
@@ -97,6 +163,10 @@ public class DebrisStorage {
      * @return true if the location is in the storage, false otherwise
      */
     public boolean containsLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
         UUID worldUUID = location.getWorld().getUID();
         String locString = serializeLocation(location);
         
@@ -107,21 +177,35 @@ public class DebrisStorage {
     /**
      * Removes a location from the storage
      * @param location The location to remove
+     * @return true if the location was removed, false otherwise
      */
-    public void removeLocation(Location location) {
+    public boolean removeLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
         UUID worldUUID = location.getWorld().getUID();
         String locString = serializeLocation(location);
         
         if (replacedLocations.containsKey(worldUUID)) {
-            replacedLocations.get(worldUUID).remove(locString);
-            saveStorage();
+            boolean removed = replacedLocations.get(worldUUID).remove(locString);
+            if (removed) {
+                // Schedule async save to prevent lag
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, this::saveStorage);
+                return true;
+            }
         }
+        
+        return false;
     }
     
     /**
      * Restores all Ancient Debris in the world
+     * @return The number of blocks restored
      */
-    public void restoreAllDebris() {
+    public int restoreAllDebris() {
+        int restoredCount = 0;
+        
         for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
             UUID worldUUID = entry.getKey();
             World world = Bukkit.getWorld(worldUUID);
@@ -130,15 +214,21 @@ public class DebrisStorage {
                 List<String> toRemove = new ArrayList<>();
                 
                 for (String locString : entry.getValue()) {
-                    Location location = deserializeLocation(world, locString);
-                    Block block = location.getBlock();
-                    
-                    // Only restore if the block is still Netherrack
-                    if (block.getType() == Material.NETHERRACK) {
-                        block.setType(Material.ANCIENT_DEBRIS);
+                    try {
+                        Location location = deserializeLocation(world, locString);
+                        Block block = location.getBlock();
+                        
+                        // Only restore if the block is still Netherrack
+                        if (block.getType() == Material.NETHERRACK) {
+                            block.setType(Material.ANCIENT_DEBRIS);
+                            restoredCount++;
+                        }
+                        
+                        toRemove.add(locString);
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
+                        toRemove.add(locString); // Remove invalid locations
                     }
-                    
-                    toRemove.add(locString);
                 }
                 
                 // Remove restored locations
@@ -146,7 +236,95 @@ public class DebrisStorage {
             }
         }
         
+        // Save changes
         saveStorage();
+        
+        plugin.getLogger().info("Restored " + restoredCount + " Ancient Debris blocks");
+        return restoredCount;
+    }
+    
+    /**
+     * Restores Ancient Debris in a specific world
+     * @param world The world to restore Ancient Debris in
+     * @return The number of blocks restored
+     */
+    public int restoreDebrisInWorld(World world) {
+        if (world == null) {
+            return 0;
+        }
+        
+        int restoredCount = 0;
+        UUID worldUUID = world.getUID();
+        
+        if (replacedLocations.containsKey(worldUUID)) {
+            List<String> toRemove = new ArrayList<>();
+            
+            for (String locString : replacedLocations.get(worldUUID)) {
+                try {
+                    Location location = deserializeLocation(world, locString);
+                    Block block = location.getBlock();
+                    
+                    // Only restore if the block is still Netherrack
+                    if (block.getType() == Material.NETHERRACK) {
+                        block.setType(Material.ANCIENT_DEBRIS);
+                        restoredCount++;
+                    }
+                    
+                    toRemove.add(locString);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
+                    toRemove.add(locString); // Remove invalid locations
+                }
+            }
+            
+            // Remove restored locations
+            replacedLocations.get(worldUUID).removeAll(toRemove);
+            
+            // Save changes
+            saveStorage();
+        }
+        
+        plugin.getLogger().info("Restored " + restoredCount + " Ancient Debris blocks in world " + world.getName());
+        return restoredCount;
+    }
+    
+    /**
+     * Gets the total number of stored locations
+     * @return The total number of stored locations
+     */
+    public int getTotalLocationsCount() {
+        int count = 0;
+        for (List<String> locations : replacedLocations.values()) {
+            count += locations.size();
+        }
+        return count;
+    }
+    
+    /**
+     * Gets the number of stored locations in a specific world
+     * @param world The world to get the count for
+     * @return The number of stored locations in the world
+     */
+    public int getWorldLocationsCount(World world) {
+        if (world == null) {
+            return 0;
+        }
+        
+        UUID worldUUID = world.getUID();
+        if (replacedLocations.containsKey(worldUUID)) {
+            return replacedLocations.get(worldUUID).size();
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Clears all stored locations
+     */
+    public void clearAllLocations() {
+        replacedLocations.clear();
+        saveStorage();
+        plugin.getLogger().info("Cleared all stored Ancient Debris locations");
     }
     
     /**
@@ -163,12 +341,21 @@ public class DebrisStorage {
      * @param world The world the location is in
      * @param locString The serialized location
      * @return The deserialized location
+     * @throws IllegalArgumentException If the location string is invalid
      */
     private Location deserializeLocation(World world, String locString) {
-        String[] parts = locString.split(",");
-        int x = Integer.parseInt(parts[0]);
-        int y = Integer.parseInt(parts[1]);
-        int z = Integer.parseInt(parts[2]);
-        return new Location(world, x, y, z);
+        try {
+            String[] parts = locString.split(",");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Invalid location format: " + locString);
+            }
+            
+            int x = Integer.parseInt(parts[0]);
+            int y = Integer.parseInt(parts[1]);
+            int z = Integer.parseInt(parts[2]);
+            return new Location(world, x, y, z);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid location format: " + locString, e);
+        }
     }
 } 
