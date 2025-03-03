@@ -1,8 +1,3 @@
-# AntiNetherite Configuration
-# 
-# This plugin prevents the use of Netherite items in your server
-# It is fully compatible with both regular Bukkit/Spigot/Paper servers and Folia
-
 # Main plugin settings
 anti-netherite:
   # ==============================
@@ -27,7 +22,7 @@ anti-netherite:
     
     # Should we cancel moving netherite items in inventories?
     # This prevents players from moving netherite items in their inventory
-    cancel-move: true
+    cancel-move: false
   
   # ==============================
   # ITEM INTERACTION SETTINGS
@@ -66,16 +61,17 @@ anti-netherite:
   ancient-debris:
     # Should we replace Ancient Debris with Netherrack when mined?
     # This prevents players from obtaining Ancient Debris
-    replace-when-mined: true
+    replace-when-mined: false
     
     # Should we replace Ancient Debris with Netherrack when chunks are loaded?
     # This prevents Ancient Debris from generating in the world
+    # THIS MAY CAUSE LAG ON FIRST LOAD
     replace-on-chunk-load: true
     
     # Should we only replace Ancient Debris in chunks that are already generated?
     # If true, only chunks that have been generated will be processed
     # If false, all chunks will be processed regardless of generation status
-    only-replace-generated-chunks: true
+    only-replace-generated-chunks: false
     
     # Should we ensure chunks are loaded when trying to replace Ancient Debris?
     # If true, chunks will be loaded if they are not already loaded
@@ -114,7 +110,7 @@ anti-netherite:
     
     # Cooldown in seconds between command executions
     # This prevents command spam and potential performance issues
-    command-cooldown-seconds: 5
+    command-cooldown-seconds: 1
     
     # Should we log Ancient Debris replacements to the console?
     # If true, a message will be logged each time Ancient Debris is replaced
