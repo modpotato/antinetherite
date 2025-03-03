@@ -34,6 +34,7 @@ public class Config {
     private boolean replaceOnChunkLoad;
     private boolean onlyReplaceGeneratedChunks;
     private boolean ensureChunksLoaded;
+    private boolean saveReplacedLocations;
     
     // Performance settings
     private boolean restoreDebrisOnDisable;
@@ -45,6 +46,7 @@ public class Config {
     private int commandCooldownSeconds;
     private boolean logDebrisReplacements;
     private boolean logInventoryRemovals;
+    private boolean ignoreCreativeSpectator;
     
     /**
      * Creates a new Config instance
@@ -87,6 +89,7 @@ public class Config {
         replaceOnChunkLoad = config.getBoolean("anti-netherite.ancient-debris.replace-on-chunk-load", true);
         onlyReplaceGeneratedChunks = config.getBoolean("anti-netherite.ancient-debris.only-replace-generated-chunks", true);
         ensureChunksLoaded = config.getBoolean("anti-netherite.ancient-debris.ensure-chunks-loaded", true);
+        saveReplacedLocations = config.getBoolean("anti-netherite.ancient-debris.save-replaced-locations", true);
         
         // Load performance settings
         restoreDebrisOnDisable = config.getBoolean("anti-netherite.performance.restore-debris-on-disable", false);
@@ -98,6 +101,7 @@ public class Config {
         commandCooldownSeconds = config.getInt("anti-netherite.advanced.command-cooldown-seconds", 5);
         logDebrisReplacements = config.getBoolean("anti-netherite.advanced.log-debris-replacements", true);
         logInventoryRemovals = config.getBoolean("anti-netherite.advanced.log-inventory-removals", true);
+        ignoreCreativeSpectator = config.getBoolean("anti-netherite.advanced.ignore-creative-spectator", false);
         
         // Load Netherite detection settings
         useNameMatching = config.getBoolean("anti-netherite.detection.use-name-matching", true);
@@ -299,6 +303,22 @@ public class Config {
      */
     public boolean isEnsureChunksLoaded() {
         return ensureChunksLoaded;
+    }
+    
+    /**
+     * Gets whether to save the locations of replaced Ancient Debris
+     * @return true if saving replaced locations, false otherwise
+     */
+    public boolean isSaveReplacedLocations() {
+        return saveReplacedLocations;
+    }
+    
+    /**
+     * Gets whether to ignore players in creative or spectator mode
+     * @return true if ignoring creative and spectator players, false otherwise
+     */
+    public boolean isIgnoreCreativeSpectator() {
+        return ignoreCreativeSpectator;
     }
     
     /**

@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.GameMode;
 
 /**
  * Scheduler for removing Netherite items from player inventories
@@ -174,6 +175,12 @@ public class NetheriteRemover {
     private void checkPlayerInventory(Player player, AtomicInteger removedCount) {
         // Skip players with permission
         if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
+        // Skip players in creative or spectator mode if configured to do so
+        if (config.isIgnoreCreativeSpectator() && 
+            (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR)) {
             return;
         }
         

@@ -11,6 +11,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.GameMode;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -68,21 +69,29 @@ public class MiningListener implements Listener {
             return;
         }
         
+        // Skip if player is in creative or spectator mode and we're ignoring those modes
+        Player player = event.getPlayer();
+        if (config.isIgnoreCreativeSpectator() && 
+            (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR)) {
+            return;
+        }
+        
         // Skip if we've already processed this location
         if (debrisStorage.containsLocation(block.getLocation())) {
             return;
         }
         
         try {
-            // Store the location before replacing
-            if (debrisStorage.addLocation(block.getLocation())) {
-                // Replace the block with Netherrack
-                block.setType(Material.NETHERRACK);
-                
-                // Notify the player
-                Player player = event.getPlayer();
-                player.sendMessage(Component.text("Ancient Debris has been converted to Netherrack!").color(NamedTextColor.RED));
+            // Replace the block with Netherrack
+            block.setType(Material.NETHERRACK);
+            
+            // Store the location if configured to do so
+            if (config.isSaveReplacedLocations()) {
+                debrisStorage.addLocation(block.getLocation());
             }
+            
+            // Notify the player
+            player.sendMessage(Component.text("Ancient Debris has been converted to Netherrack!").color(NamedTextColor.RED));
             
             // Cancel the event
             event.setCancelled(true);
@@ -122,7 +131,8 @@ public class MiningListener implements Listener {
                     // Ancient Debris only generates in the Nether between Y=8 and Y=119
                     for (int y = 8; y < 120; y++) {
                         // Limit the number of replacements per chunk to prevent lag
-                        if (replacementCount >= maxReplacements) {
+                        // Unless maxReplacements is -1, which means no limit
+                        if (maxReplacements != -1 && replacementCount >= maxReplacements) {
                             logger.warning("Too many Ancient Debris found in chunk at " + 
                                           event.getChunk().getX() + "," + event.getChunk().getZ() + 
                                           " in world " + world.getName() + 
@@ -137,11 +147,13 @@ public class MiningListener implements Listener {
                                 continue;
                             }
                             
-                            // Store the location before replacing
-                            if (debrisStorage.addLocation(block.getLocation())) {
-                                // Replace the block with Netherrack
-                                block.setType(Material.NETHERRACK);
-                                replacementCount++;
+                            // Replace the block with Netherrack
+                            block.setType(Material.NETHERRACK);
+                            replacementCount++;
+                            
+                            // Store the location if configured to do so
+                            if (config.isSaveReplacedLocations()) {
+                                debrisStorage.addLocation(block.getLocation());
                             }
                         }
                     }

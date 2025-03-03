@@ -115,22 +115,22 @@ public class Main extends JavaPlugin {
     private void registerListeners() {
         try {
             if (config.isCancelCraft()) {
-                craftListener = new CraftListener(netheriteDetector);
+                craftListener = new CraftListener(netheriteDetector, config);
                 getServer().getPluginManager().registerEvents(craftListener, this);
             }
     
             if (config.isCancelEquip()) {
-                equipListener = new EquipListener(netheriteDetector);
+                equipListener = new EquipListener(netheriteDetector, config);
                 getServer().getPluginManager().registerEvents(equipListener, this);
             }
     
             if (config.isCancelAttack()) {
-                attackListener = new AttackListener(netheriteDetector);
+                attackListener = new AttackListener(netheriteDetector, config);
                 getServer().getPluginManager().registerEvents(attackListener, this);
             }
             
             if (config.isCancelPickup()) {
-                pickupListener = new PickupListener(netheriteDetector);
+                pickupListener = new PickupListener(netheriteDetector, config);
                 getServer().getPluginManager().registerEvents(pickupListener, this);
             }
             
@@ -138,7 +138,7 @@ public class Main extends JavaPlugin {
             getServer().getPluginManager().registerEvents(dropListener, this);
             
             if (config.isCancelInventoryMove()) {
-                inventoryMoveListener = new InventoryMoveListener(netheriteDetector);
+                inventoryMoveListener = new InventoryMoveListener(netheriteDetector, config);
                 getServer().getPluginManager().registerEvents(inventoryMoveListener, this);
             }
             

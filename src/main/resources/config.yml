@@ -71,12 +71,18 @@ anti-netherite:
     # Should we only replace Ancient Debris in chunks that are already generated?
     # If true, only chunks that have been generated will be processed
     # If false, all chunks will be processed regardless of generation status
-    only-replace-generated-chunks: false
+    only-replace-generated-chunks: true
     
     # Should we ensure chunks are loaded when trying to replace Ancient Debris?
     # If true, chunks will be loaded if they are not already loaded
     # If false, only already loaded chunks will be processed
     ensure-chunks-loaded: true
+    
+    # Should we save the locations of replaced Ancient Debris?
+    # If true, the plugin will track and save replaced Ancient Debris locations
+    # If false, Ancient Debris will be replaced but not tracked or saved
+    # Setting this to false will prevent restoration of Ancient Debris
+    save-replaced-locations: true
   
   # ==============================
   # PERFORMANCE SETTINGS
@@ -96,6 +102,7 @@ anti-netherite:
     # Maximum number of Ancient Debris to replace per chunk to prevent lag
     # Higher values may cause more lag but will replace more Ancient Debris
     # Lower values will reduce lag but may leave some Ancient Debris unreplaced
+    # Set to -1 to remove the limit entirely (not recommended for performance)
     max-replacements-per-chunk: 50
   
   # ==============================
@@ -121,6 +128,11 @@ anti-netherite:
     # If true, a message will be logged each time Netherite items are removed
     # If false, only summary messages will be logged
     log-inventory-removals: true
+    
+    # Should we ignore players in creative or spectator mode?
+    # If true, players in creative or spectator mode will not be affected by the plugin
+    # If false, all players will be affected regardless of game mode
+    ignore-creative-spectator: false
   
   # ==============================
   # DETECTION SETTINGS
@@ -149,6 +161,7 @@ anti-netherite:
       - NETHERITE_BLOCK
       - NETHERITE_INGOT
       - NETHERITE_SCRAP
+      - ANCIENT_DEBRIS
   
   # ==============================
   # TIMING SETTINGS

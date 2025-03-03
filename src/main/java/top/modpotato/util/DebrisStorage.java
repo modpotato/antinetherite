@@ -121,6 +121,11 @@ public class DebrisStorage {
             return;
         }
         
+        // Skip if we're not saving replaced locations
+        if (!config.isSaveReplacedLocations()) {
+            return;
+        }
+        
         try {
             // Clear the storage file
             for (String key : storage.getKeys(false)) {
@@ -149,28 +154,36 @@ public class DebrisStorage {
             return false;
         }
         
-        UUID worldUUID = location.getWorld().getUID();
-        String locationString = serializeLocation(location);
+        // Skip if we're not saving replaced locations
+        if (!config.isSaveReplacedLocations()) {
+            return true;
+        }
         
-        // Get or create the list for this world
-        List<String> locations = replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>());
+        World world = location.getWorld();
+        if (world == null) {
+            return false;
+        }
+        
+        UUID worldUUID = world.getUID();
+        String locString = serializeLocation(location);
+        
+        // Initialize the list if it doesn't exist
+        replacedLocations.computeIfAbsent(worldUUID, k -> new ArrayList<>());
         
         // Check if we've reached the maximum number of locations for this world
-        if (locations.size() >= config.getMaxLocationsPerWorld()) {
+        List<String> worldLocations = replacedLocations.get(worldUUID);
+        if (worldLocations.size() >= config.getMaxLocationsPerWorld()) {
             plugin.getLogger().warning("Maximum number of Ancient Debris locations reached for world " + 
-                                      location.getWorld().getName() + ". Not adding more locations.");
+                                      world.getName() + ". Skipping location: " + locString);
             return false;
         }
         
         // Add the location if it doesn't already exist
-        if (!locations.contains(locationString)) {
-            locations.add(locationString);
+        if (!worldLocations.contains(locString)) {
+            worldLocations.add(locString);
             
-            // Save the storage periodically
-            if (locations.size() % 100 == 0) {
-                saveStorageAsync();
-            }
-            
+            // Save the storage asynchronously
+            saveStorageAsync();
             return true;
         }
         
