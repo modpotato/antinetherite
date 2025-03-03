@@ -49,7 +49,7 @@ public class Main extends JavaPlugin {
             netheriteDetector = new NetheriteDetector(config);
             
             // Initialize debris storage
-            debrisStorage = new DebrisStorage(this);
+            debrisStorage = new DebrisStorage(this, config);
             
             // Check if running on Folia
             isFolia = checkFolia();
@@ -145,7 +145,9 @@ public class Main extends JavaPlugin {
             // Register mining listener if either ancient debris replacement option is enabled
             if (config.isReplaceAncientDebris() || config.isReplaceOnChunkLoad()) {
                 miningListener = new MiningListener(debrisStorage, 
-                                                   config.isReplaceAncientDebris(), config.isReplaceOnChunkLoad());
+                                                   config.isReplaceAncientDebris(), 
+                                                   config.isReplaceOnChunkLoad(),
+                                                   config.isOnlyReplaceGeneratedChunks());
                 getServer().getPluginManager().registerEvents(miningListener, this);
             }
         } catch (Exception e) {

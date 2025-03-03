@@ -19,18 +19,18 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Command handler for the AntiNetherite plugin
  */
 public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     private final Main plugin;
-    private final List<String> SETTINGS = Arrays.asList(
-        "clear", "cancel-craft", "cancel-equip", "cancel-attack", 
-        "cancel-pickup", "remove-dropped", "cancel-inventory-move", 
-        "replace-ancient-debris", "replace-on-chunk-load",
-        "detection.use-name-matching", "delay", "multiplier"
-    );
+    
+    // Map of user-friendly setting names to actual config paths
+    private final Map<String, String> SETTINGS_MAP = new HashMap<>();
+    
     private final List<String> BOOLEAN_VALUES = Arrays.asList("true", "false");
     
     // Track when the last restore command was used to prevent spam
@@ -40,6 +40,33 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     public AntiNetheriteCommand(Main plugin) {
         this.plugin = plugin;
         plugin.getCommand("antinetherite").setTabCompleter(this);
+        
+        // Initialize settings map with user-friendly names and actual config paths
+        // Inventory settings
+        SETTINGS_MAP.put("clear", "anti-netherite.inventory.clear");
+        SETTINGS_MAP.put("cancel-inventory-move", "anti-netherite.inventory.cancel-move");
+        
+        // Interaction settings
+        SETTINGS_MAP.put("cancel-craft", "anti-netherite.interaction.cancel-craft");
+        SETTINGS_MAP.put("cancel-equip", "anti-netherite.interaction.cancel-equip");
+        SETTINGS_MAP.put("cancel-attack", "anti-netherite.interaction.cancel-attack");
+        
+        // Item handling settings
+        SETTINGS_MAP.put("cancel-pickup", "anti-netherite.item-handling.cancel-pickup");
+        SETTINGS_MAP.put("remove-dropped", "anti-netherite.item-handling.remove-dropped");
+        
+        // Ancient debris settings
+        SETTINGS_MAP.put("replace-ancient-debris", "anti-netherite.ancient-debris.replace-when-mined");
+        SETTINGS_MAP.put("replace-on-chunk-load", "anti-netherite.ancient-debris.replace-on-chunk-load");
+        SETTINGS_MAP.put("only-replace-generated-chunks", "anti-netherite.ancient-debris.only-replace-generated-chunks");
+        SETTINGS_MAP.put("ensure-chunks-loaded", "anti-netherite.ancient-debris.ensure-chunks-loaded");
+        
+        // Detection settings
+        SETTINGS_MAP.put("detection.use-name-matching", "anti-netherite.detection.use-name-matching");
+        
+        // Timing settings
+        SETTINGS_MAP.put("delay", "anti-netherite.timing.delay");
+        SETTINGS_MAP.put("multiplier", "anti-netherite.timing.multiplier");
     }
 
     @Override
@@ -70,8 +97,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 lastRestoreTime = currentTime;
                 
                 // Check if replacement features are enabled in config
-                boolean replaceAncientDebris = (boolean) plugin.getConfigValue("replace-ancient-debris");
-                boolean replaceOnChunkLoad = (boolean) plugin.getConfigValue("replace-on-chunk-load");
+                boolean replaceAncientDebris = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
+                boolean replaceOnChunkLoad = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-on-chunk-load");
                 
                 // If both replacement features are disabled, check if there's anything to restore
                 if (!replaceAncientDebris && !replaceOnChunkLoad) {
@@ -173,8 +200,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 }
                 
                 // Show config status
-                boolean isReplaceAncientDebris = (boolean) plugin.getConfigValue("replace-ancient-debris");
-                boolean isReplaceOnChunkLoad = (boolean) plugin.getConfigValue("replace-on-chunk-load");
+                boolean isReplaceAncientDebris = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
+                boolean isReplaceOnChunkLoad = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-on-chunk-load");
                 
                 sender.sendMessage(Component.text("Current config:").color(NamedTextColor.GREEN));
                 sender.sendMessage(Component.text("- Replace when mined: " + (isReplaceAncientDebris ? "Enabled" : "Disabled")).color(
@@ -197,8 +224,14 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 
-                String path = "anti-netherite." + args[1];
-                Object value = plugin.getConfigValue(path);
+                // Get the actual config path from the user-friendly name
+                String configPath = SETTINGS_MAP.get(args[1]);
+                if (configPath == null) {
+                    sender.sendMessage(Component.text("Setting not found: " + args[1]).color(NamedTextColor.RED));
+                    return true;
+                }
+                
+                Object value = plugin.getConfigValue(configPath);
                 if (value == null) {
                     sender.sendMessage(Component.text("Setting not found: " + args[1]).color(NamedTextColor.RED));
                 } else {
@@ -211,7 +244,13 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 
-                String settingPath = "anti-netherite." + args[1];
+                // Get the actual config path from the user-friendly name
+                String settingPath = SETTINGS_MAP.get(args[1]);
+                if (settingPath == null && !args[1].equals("detection.items")) {
+                    sender.sendMessage(Component.text("Unknown setting: " + args[1]).color(NamedTextColor.RED));
+                    return true;
+                }
+                
                 String settingValue = args[2];
                 
                 // Handle different setting types
@@ -280,16 +319,19 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean isBooleanSetting(String setting) {
-        return setting.equals("clear") || 
-               setting.equals("cancel-craft") || 
-               setting.equals("cancel-equip") || 
-               setting.equals("cancel-attack") ||
-               setting.equals("cancel-pickup") ||
-               setting.equals("remove-dropped") ||
-               setting.equals("cancel-inventory-move") ||
-               setting.equals("replace-ancient-debris") ||
-               setting.equals("replace-on-chunk-load") ||
-               setting.equals("detection.use-name-matching");
+        String configPath = SETTINGS_MAP.get(setting);
+        if (configPath == null) {
+            return false;
+        }
+        
+        // Check if the setting is a boolean type
+        return configPath.contains("clear") || 
+               configPath.contains("cancel") || 
+               configPath.contains("remove") || 
+               configPath.contains("replace") || 
+               configPath.contains("use-name-matching") ||
+               configPath.contains("only-replace-generated-chunks") ||
+               configPath.contains("ensure-chunks-loaded");
     }
 
     private void showHelp(CommandSender sender) {
@@ -302,12 +344,29 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("  - Displays counts per world and current config status").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("/antinetherite get <setting> - Get a configuration value").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite set <setting> <value> - Set a configuration value").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("Available settings:").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("clear, cancel-craft, cancel-equip, cancel-attack").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("cancel-pickup, remove-dropped, cancel-inventory-move").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("replace-ancient-debris, replace-on-chunk-load").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("detection.use-name-matching, delay, multiplier").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("Special commands:").color(NamedTextColor.YELLOW));
+        
+        sender.sendMessage(Component.text("Available settings:").color(NamedTextColor.GOLD));
+        
+        sender.sendMessage(Component.text("Inventory settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  clear, cancel-inventory-move").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Interaction settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  cancel-craft, cancel-equip, cancel-attack").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Item handling settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  cancel-pickup, remove-dropped").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Ancient debris settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  replace-ancient-debris, replace-on-chunk-load").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  only-replace-generated-chunks, ensure-chunks-loaded").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Detection settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  detection.use-name-matching").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Timing settings:").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  delay, multiplier").color(NamedTextColor.GRAY));
+        
+        sender.sendMessage(Component.text("Special commands:").color(NamedTextColor.GOLD));
         sender.sendMessage(Component.text("/antinetherite get detection.items - List all Netherite items").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite set detection.items add <item> - Add an item to the list").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite set detection.items remove <item> - Remove an item from the list").color(NamedTextColor.YELLOW));
@@ -335,12 +394,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     }
                 }
                 StringUtil.copyPartialMatches(args[1], worldNames, completions);
-            } else if (args[0].equalsIgnoreCase("get")) {
-                List<String> allSettings = new ArrayList<>(SETTINGS);
-                allSettings.add("detection.items");
-                StringUtil.copyPartialMatches(args[1], allSettings, completions);
-            } else if (args[0].equalsIgnoreCase("set")) {
-                List<String> allSettings = new ArrayList<>(SETTINGS);
+            } else if (args[0].equalsIgnoreCase("get") || args[0].equalsIgnoreCase("set")) {
+                List<String> allSettings = new ArrayList<>(SETTINGS_MAP.keySet());
                 allSettings.add("detection.items");
                 StringUtil.copyPartialMatches(args[1], allSettings, completions);
             }

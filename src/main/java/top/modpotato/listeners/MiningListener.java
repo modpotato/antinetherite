@@ -25,6 +25,7 @@ public class MiningListener implements Listener {
     private final DebrisStorage debrisStorage;
     private final boolean replaceAncientDebris;
     private final boolean replaceOnChunkLoad;
+    private final boolean onlyReplaceGeneratedChunks;
     private final Logger logger;
     
     // Maximum number of Ancient Debris to replace per chunk to prevent lag
@@ -35,12 +36,16 @@ public class MiningListener implements Listener {
      * @param debrisStorage The debris storage
      * @param replaceAncientDebris Whether to replace Ancient Debris when mined
      * @param replaceOnChunkLoad Whether to replace Ancient Debris when chunks are loaded
+     * @param onlyReplaceGeneratedChunks Whether to only replace Ancient Debris in generated chunks
      */
     public MiningListener(DebrisStorage debrisStorage, 
-                          boolean replaceAncientDebris, boolean replaceOnChunkLoad) {
+                          boolean replaceAncientDebris, 
+                          boolean replaceOnChunkLoad,
+                          boolean onlyReplaceGeneratedChunks) {
         this.debrisStorage = debrisStorage;
         this.replaceAncientDebris = replaceAncientDebris;
         this.replaceOnChunkLoad = replaceOnChunkLoad;
+        this.onlyReplaceGeneratedChunks = onlyReplaceGeneratedChunks;
         this.logger = Bukkit.getLogger();
     }
     
@@ -94,8 +99,8 @@ public class MiningListener implements Listener {
             return;
         }
         
-        // Only process newly generated chunks
-        if (!event.isNewChunk()) {
+        // Check if we should only process newly generated chunks
+        if (onlyReplaceGeneratedChunks && !event.isNewChunk()) {
             return;
         }
         

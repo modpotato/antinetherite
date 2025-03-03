@@ -69,6 +69,16 @@ anti-netherite:
   # This prevents Ancient Debris from generating in the world
   replace-on-chunk-load: true
 
+  # Should we only replace Ancient Debris in chunks that are already generated?
+  # If true, only chunks that have been generated will be processed
+  # If false, all chunks will be processed regardless of generation status
+  only-replace-generated-chunks: true
+
+  # Should we ensure chunks are loaded when trying to replace Ancient Debris?
+  # If true, chunks will be loaded if they are not already loaded
+  # If false, only already loaded chunks will be processed
+  ensure-chunks-loaded: true
+
   # DETECTION SETTINGS
   
   # Settings for detecting Netherite items
@@ -127,6 +137,8 @@ Available settings:
 - `cancel-inventory-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
 - `replace-ancient-debris` - Enable/disable replacing Ancient Debris with Netherrack when mined (true/false)
 - `replace-on-chunk-load` - Enable/disable replacing Ancient Debris with Netherrack when chunks are loaded (true/false)
+- `only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
+- `ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
 - `detection.use-name-matching` - Enable/disable name-based detection of Netherite items (true/false)
 - `delay` - Set the delay between inventory checks (in seconds)
 - `multiplier` - Set the tick multiplier (20 = 1 second)
@@ -188,6 +200,8 @@ The Ancient Debris replacement system includes several safeguards:
 - **Storage Limits**: Prevents excessive memory usage by limiting the number of stored locations
 - **Nether-Only Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
 - **Persistent Storage**: Saves replaced locations to disk for recovery after server restarts
+- **Chunk Generation Checking**: Can be configured to only process chunks that have already been generated
+- **Chunk Loading Control**: Can be configured to ensure chunks are loaded when replacing or restoring Ancient Debris
 
 ## Compatibility
 

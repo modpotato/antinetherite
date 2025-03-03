@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import top.modpotato.Main;
+import top.modpotato.config.Config;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class DebrisStorage {
     private final Main plugin;
     private final File storageFile;
     private FileConfiguration storage;
+    private final Config config;
     
     // Use ConcurrentHashMap for thread safety
     private final Map<UUID, List<String>> replacedLocations = new ConcurrentHashMap<>();
@@ -39,9 +41,11 @@ public class DebrisStorage {
     /**
      * Creates a new DebrisStorage instance
      * @param plugin The plugin instance
+     * @param config The configuration
      */
-    public DebrisStorage(Main plugin) {
+    public DebrisStorage(Main plugin, Config config) {
         this.plugin = plugin;
+        this.config = config;
         this.storageFile = new File(plugin.getDataFolder(), "debris_storage.yml");
         loadStorage();
     }
@@ -216,6 +220,13 @@ public class DebrisStorage {
                 for (String locString : entry.getValue()) {
                     try {
                         Location location = deserializeLocation(world, locString);
+                        
+                        // Check if the chunk is loaded or should be loaded
+                        if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                            plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                            continue;
+                        }
+                        
                         Block block = location.getBlock();
                         
                         // Only restore if the block is still Netherrack
@@ -262,6 +273,13 @@ public class DebrisStorage {
             for (String locString : replacedLocations.get(worldUUID)) {
                 try {
                     Location location = deserializeLocation(world, locString);
+                    
+                    // Check if the chunk is loaded or should be loaded
+                    if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                        plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                        continue;
+                    }
+                    
                     Block block = location.getBlock();
                     
                     // Only restore if the block is still Netherrack
@@ -325,6 +343,66 @@ public class DebrisStorage {
         replacedLocations.clear();
         saveStorage();
         plugin.getLogger().info("Cleared all stored Ancient Debris locations");
+    }
+    
+    /**
+     * Checks if a chunk is loaded
+     * @param location The location to check
+     * @return true if the chunk is loaded, false otherwise
+     */
+    public boolean isChunkLoaded(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
+        return location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4);
+    }
+    
+    /**
+     * Checks if a chunk is generated
+     * @param location The location to check
+     * @return true if the chunk is generated, false otherwise
+     */
+    public boolean isChunkGenerated(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
+        return location.getWorld().isChunkGenerated(location.getBlockX() >> 4, location.getBlockZ() >> 4);
+    }
+    
+    /**
+     * Loads a chunk if needed
+     * @param location The location to load the chunk for
+     * @return true if the chunk was loaded or was already loaded, false otherwise
+     */
+    public boolean loadChunkIfNeeded(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        
+        // Check if we should ensure chunks are loaded
+        if (!config.isEnsureChunksLoaded()) {
+            return false;
+        }
+        
+        // Check if the chunk is already loaded
+        if (isChunkLoaded(location)) {
+            return true;
+        }
+        
+        // Check if the chunk is generated if we only want to load generated chunks
+        if (config.isOnlyReplaceGeneratedChunks() && !isChunkGenerated(location)) {
+            return false;
+        }
+        
+        try {
+            // Load the chunk
+            return location.getWorld().loadChunk(location.getBlockX() >> 4, location.getBlockZ() >> 4, true);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error loading chunk at " + location + ": " + e.getMessage());
+            return false;
+        }
     }
     
     /**

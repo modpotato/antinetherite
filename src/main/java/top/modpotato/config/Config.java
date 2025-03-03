@@ -29,6 +29,8 @@ public class Config {
     // Ancient Debris settings
     private boolean replaceAncientDebris;
     private boolean replaceOnChunkLoad;
+    private boolean onlyReplaceGeneratedChunks;
+    private boolean ensureChunksLoaded;
     
     /**
      * Creates a new Config instance
@@ -46,19 +48,28 @@ public class Config {
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
         
-        delay = config.getInt("anti-netherite.delay", 1);
-        multiplier = config.getInt("anti-netherite.multiplier", 20);
-        clearNetherite = config.getBoolean("anti-netherite.clear", false);
-        cancelCraft = config.getBoolean("anti-netherite.cancel-craft", true);
-        cancelEquip = config.getBoolean("anti-netherite.cancel-equip", true);
-        cancelAttack = config.getBoolean("anti-netherite.cancel-attack", true);
-        cancelPickup = config.getBoolean("anti-netherite.cancel-pickup", true);
-        removeDropped = config.getBoolean("anti-netherite.remove-dropped", true);
-        cancelInventoryMove = config.getBoolean("anti-netherite.cancel-inventory-move", true);
+        // Load timing settings
+        delay = config.getInt("anti-netherite.timing.delay", 1);
+        multiplier = config.getInt("anti-netherite.timing.multiplier", 20);
+        
+        // Load inventory protection settings
+        clearNetherite = config.getBoolean("anti-netherite.inventory.clear", false);
+        cancelInventoryMove = config.getBoolean("anti-netherite.inventory.cancel-move", true);
+        
+        // Load item interaction settings
+        cancelCraft = config.getBoolean("anti-netherite.interaction.cancel-craft", true);
+        cancelEquip = config.getBoolean("anti-netherite.interaction.cancel-equip", true);
+        cancelAttack = config.getBoolean("anti-netherite.interaction.cancel-attack", true);
+        
+        // Load item handling settings
+        cancelPickup = config.getBoolean("anti-netherite.item-handling.cancel-pickup", true);
+        removeDropped = config.getBoolean("anti-netherite.item-handling.remove-dropped", true);
         
         // Load Ancient Debris settings
-        replaceAncientDebris = config.getBoolean("anti-netherite.replace-ancient-debris", true);
-        replaceOnChunkLoad = config.getBoolean("anti-netherite.replace-on-chunk-load", true);
+        replaceAncientDebris = config.getBoolean("anti-netherite.ancient-debris.replace-when-mined", true);
+        replaceOnChunkLoad = config.getBoolean("anti-netherite.ancient-debris.replace-on-chunk-load", true);
+        onlyReplaceGeneratedChunks = config.getBoolean("anti-netherite.ancient-debris.only-replace-generated-chunks", true);
+        ensureChunksLoaded = config.getBoolean("anti-netherite.ancient-debris.ensure-chunks-loaded", true);
         
         // Load Netherite detection settings
         useNameMatching = config.getBoolean("anti-netherite.detection.use-name-matching", true);
@@ -180,5 +191,21 @@ public class Config {
      */
     public boolean isReplaceOnChunkLoad() {
         return replaceOnChunkLoad;
+    }
+    
+    /**
+     * Gets whether to only replace Ancient Debris in generated chunks
+     * @return true if only replacing in generated chunks, false otherwise
+     */
+    public boolean isOnlyReplaceGeneratedChunks() {
+        return onlyReplaceGeneratedChunks;
+    }
+    
+    /**
+     * Gets whether to ensure chunks are loaded when replacing Ancient Debris
+     * @return true if ensuring chunks are loaded, false otherwise
+     */
+    public boolean isEnsureChunksLoaded() {
+        return ensureChunksLoaded;
     }
 } 
