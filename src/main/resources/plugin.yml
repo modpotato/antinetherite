@@ -11,6 +11,8 @@ commands:
     description: Manage AntiNetherite plugin settings
     usage: |
       /<command> reload - Reload the configuration
+      /<command> restore-debris [world] - Restore all replaced Ancient Debris (optionally in a specific world)
+      /<command> debris-info - Show information about stored Ancient Debris locations
       /<command> get <setting> - Get a configuration value
       /<command> set <setting> <value> - Set a configuration value
     permission: antinetherite.manage

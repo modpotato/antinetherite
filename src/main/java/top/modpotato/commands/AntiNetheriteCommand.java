@@ -69,6 +69,21 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 
                 lastRestoreTime = currentTime;
                 
+                // Check if replacement features are enabled in config
+                boolean replaceAncientDebris = (boolean) plugin.getConfigValue("replace-ancient-debris");
+                boolean replaceOnChunkLoad = (boolean) plugin.getConfigValue("replace-on-chunk-load");
+                
+                // If both replacement features are disabled, check if there's anything to restore
+                if (!replaceAncientDebris && !replaceOnChunkLoad) {
+                    int totalLocations = plugin.getDebrisStorage().getTotalLocationsCount();
+                    if (totalLocations == 0) {
+                        sender.sendMessage(Component.text("Ancient Debris replacement is disabled and there are no stored locations to restore.").color(NamedTextColor.YELLOW));
+                        return true;
+                    } else {
+                        sender.sendMessage(Component.text("Ancient Debris replacement is disabled but there are still " + totalLocations + " stored locations. Proceeding with restoration...").color(NamedTextColor.YELLOW));
+                    }
+                }
+                
                 if (args.length > 1) {
                     // World-specific restore
                     String worldName = args[1];
@@ -79,7 +94,14 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
                     
-                    sender.sendMessage(Component.text("Restoring Ancient Debris in world " + worldName + "...").color(NamedTextColor.YELLOW));
+                    // Check if there are any locations to restore in this world
+                    int worldLocations = plugin.getDebrisStorage().getWorldLocationsCount(world);
+                    if (worldLocations == 0) {
+                        sender.sendMessage(Component.text("No Ancient Debris locations to restore in world " + worldName + ".").color(NamedTextColor.YELLOW));
+                        return true;
+                    }
+                    
+                    sender.sendMessage(Component.text("Restoring " + worldLocations + " Ancient Debris in world " + worldName + "...").color(NamedTextColor.YELLOW));
                     
                     // Run the restoration asynchronously to prevent lag
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -101,7 +123,14 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     });
                 } else {
                     // Global restore
-                    sender.sendMessage(Component.text("Restoring all replaced Ancient Debris...").color(NamedTextColor.YELLOW));
+                    // Check if there are any locations to restore
+                    int totalLocations = plugin.getDebrisStorage().getTotalLocationsCount();
+                    if (totalLocations == 0) {
+                        sender.sendMessage(Component.text("No Ancient Debris locations to restore.").color(NamedTextColor.YELLOW));
+                        return true;
+                    }
+                    
+                    sender.sendMessage(Component.text("Restoring " + totalLocations + " replaced Ancient Debris...").color(NamedTextColor.YELLOW));
                     
                     // Run the restoration asynchronously to prevent lag
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -125,17 +154,34 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 return true;
             case "debris-info":
                 // Show information about stored Ancient Debris locations
-                int totalCount = plugin.getDebrisStorage().getTotalLocationsCount();
-                sender.sendMessage(Component.text("Ancient Debris Storage Information:").color(NamedTextColor.GOLD));
-                sender.sendMessage(Component.text("Total stored locations: " + totalCount).color(NamedTextColor.YELLOW));
+                int totalLocations = plugin.getDebrisStorage().getTotalLocationsCount();
+                
+                if (totalLocations == 0) {
+                    sender.sendMessage(Component.text("No Ancient Debris locations are currently stored.").color(NamedTextColor.YELLOW));
+                    return true;
+                }
+                
+                sender.sendMessage(Component.text("Ancient Debris Information:").color(NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("Total stored locations: " + totalLocations).color(NamedTextColor.WHITE));
                 
                 // Show per-world counts
                 for (World world : Bukkit.getWorlds()) {
                     int worldCount = plugin.getDebrisStorage().getWorldLocationsCount(world);
                     if (worldCount > 0) {
-                        sender.sendMessage(Component.text("World " + world.getName() + ": " + worldCount + " locations").color(NamedTextColor.YELLOW));
+                        sender.sendMessage(Component.text("- " + world.getName() + ": " + worldCount + " locations").color(NamedTextColor.WHITE));
                     }
                 }
+                
+                // Show config status
+                boolean isReplaceAncientDebris = (boolean) plugin.getConfigValue("replace-ancient-debris");
+                boolean isReplaceOnChunkLoad = (boolean) plugin.getConfigValue("replace-on-chunk-load");
+                
+                sender.sendMessage(Component.text("Current config:").color(NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("- Replace when mined: " + (isReplaceAncientDebris ? "Enabled" : "Disabled")).color(
+                    isReplaceAncientDebris ? NamedTextColor.RED : NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("- Replace on chunk load: " + (isReplaceOnChunkLoad ? "Enabled" : "Disabled")).color(
+                    isReplaceOnChunkLoad ? NamedTextColor.RED : NamedTextColor.GREEN));
+                
                 return true;
             case "get":
                 if (args.length < 2) {
@@ -250,7 +296,10 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("AntiNetherite Commands:").color(NamedTextColor.GOLD));
         sender.sendMessage(Component.text("/antinetherite reload - Reload the configuration").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite restore-debris [world] - Restore all replaced Ancient Debris").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  - Optional world parameter to restore only in a specific world").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  - Only restores blocks that are still Netherrack").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("/antinetherite debris-info - Show information about stored Ancient Debris locations").color(NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  - Displays counts per world and current config status").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("/antinetherite get <setting> - Get a configuration value").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite set <setting> <value> - Set a configuration value").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("Available settings:").color(NamedTextColor.YELLOW));
@@ -280,7 +329,10 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 // Tab complete for world names
                 List<String> worldNames = new ArrayList<>();
                 for (World world : Bukkit.getWorlds()) {
-                    worldNames.add(world.getName());
+                    // Only include worlds that have stored locations
+                    if (plugin.getDebrisStorage().getWorldLocationsCount(world) > 0) {
+                        worldNames.add(world.getName());
+                    }
                 }
                 StringUtil.copyPartialMatches(args[1], worldNames, completions);
             } else if (args[0].equalsIgnoreCase("get")) {
