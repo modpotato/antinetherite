@@ -72,6 +72,26 @@ anti-netherite:
     ensure-chunks-loaded: true
   
   # ==============================
+  # PERFORMANCE SETTINGS
+  # ==============================
+  
+  performance:
+    # Should we restore Ancient Debris when the plugin is disabled?
+    # WARNING: This can cause significant lag if there are many replaced blocks
+    # If false, Ancient Debris will remain as Netherrack when the plugin is disabled
+    restore-debris-on-disable: false
+    
+    # Should we restore Ancient Debris when the configuration changes?
+    # WARNING: This can cause significant lag if there are many replaced blocks
+    # If false, Ancient Debris will remain as Netherrack when the configuration changes
+    restore-debris-on-config-change: false
+    
+    # Maximum number of Ancient Debris to replace per chunk to prevent lag
+    # Higher values may cause more lag but will replace more Ancient Debris
+    # Lower values will reduce lag but may leave some Ancient Debris unreplaced
+    max-replacements-per-chunk: 50
+  
+  # ==============================
   # DETECTION SETTINGS
   # ==============================
   

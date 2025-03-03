@@ -32,6 +32,11 @@ public class Config {
     private boolean onlyReplaceGeneratedChunks;
     private boolean ensureChunksLoaded;
     
+    // Performance settings
+    private boolean restoreDebrisOnDisable;
+    private boolean restoreDebrisOnConfigChange;
+    private int maxReplacementsPerChunk;
+    
     /**
      * Creates a new Config instance
      * @param plugin The plugin instance
@@ -70,6 +75,11 @@ public class Config {
         replaceOnChunkLoad = config.getBoolean("anti-netherite.ancient-debris.replace-on-chunk-load", true);
         onlyReplaceGeneratedChunks = config.getBoolean("anti-netherite.ancient-debris.only-replace-generated-chunks", true);
         ensureChunksLoaded = config.getBoolean("anti-netherite.ancient-debris.ensure-chunks-loaded", true);
+        
+        // Load performance settings
+        restoreDebrisOnDisable = config.getBoolean("anti-netherite.performance.restore-debris-on-disable", false);
+        restoreDebrisOnConfigChange = config.getBoolean("anti-netherite.performance.restore-debris-on-config-change", false);
+        maxReplacementsPerChunk = config.getInt("anti-netherite.performance.max-replacements-per-chunk", 50);
         
         // Load Netherite detection settings
         useNameMatching = config.getBoolean("anti-netherite.detection.use-name-matching", true);
@@ -199,6 +209,30 @@ public class Config {
      */
     public boolean isOnlyReplaceGeneratedChunks() {
         return onlyReplaceGeneratedChunks;
+    }
+    
+    /**
+     * Gets whether to restore Ancient Debris when the plugin is disabled
+     * @return true if restoring Ancient Debris on disable, false otherwise
+     */
+    public boolean isRestoreDebrisOnDisable() {
+        return restoreDebrisOnDisable;
+    }
+    
+    /**
+     * Gets whether to restore Ancient Debris when the configuration changes
+     * @return true if restoring Ancient Debris on config change, false otherwise
+     */
+    public boolean isRestoreDebrisOnConfigChange() {
+        return restoreDebrisOnConfigChange;
+    }
+    
+    /**
+     * Gets the maximum number of Ancient Debris replacements per chunk
+     * @return The maximum number of replacements per chunk
+     */
+    public int getMaxReplacementsPerChunk() {
+        return maxReplacementsPerChunk;
     }
     
     /**

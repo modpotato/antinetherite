@@ -87,8 +87,8 @@ public class Main extends JavaPlugin {
                 netheriteRemover.stop();
             }
             
-            // Restore Ancient Debris if needed
-            if (miningListener != null && (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad())) {
+            // Restore Ancient Debris if explicitly configured to do so
+            if (miningListener != null && config.isRestoreDebrisOnDisable()) {
                 getLogger().info("Restoring Ancient Debris blocks...");
                 int count = miningListener.restoreAllDebris();
                 getLogger().info("Restored " + count + " Ancient Debris blocks");
@@ -147,7 +147,8 @@ public class Main extends JavaPlugin {
                 miningListener = new MiningListener(debrisStorage, 
                                                    config.isReplaceAncientDebris(), 
                                                    config.isReplaceOnChunkLoad(),
-                                                   config.isOnlyReplaceGeneratedChunks());
+                                                   config.isOnlyReplaceGeneratedChunks(),
+                                                   config);
                 getServer().getPluginManager().registerEvents(miningListener, this);
             }
         } catch (Exception e) {
@@ -273,10 +274,11 @@ public class Main extends JavaPlugin {
                 netheriteRemover.stop();
             }
             
-            // Restore Ancient Debris if needed
+            // Restore Ancient Debris if explicitly configured to do so
             if (miningListener != null && 
                 (oldReplaceAncientDebris || oldReplaceOnChunkLoad) && 
-                (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad())) {
+                (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad()) &&
+                config.isRestoreDebrisOnConfigChange()) {
                 getLogger().info("Restoring Ancient Debris blocks due to config change...");
                 int count = miningListener.restoreAllDebris();
                 getLogger().info("Restored " + count + " Ancient Debris blocks");

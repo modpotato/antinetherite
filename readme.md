@@ -13,7 +13,7 @@ AntiNetherite is a highly configurable Minecraft plugin designed to remove Nethe
 - Removes dropped Netherite items
 - Prevents moving Netherite items in inventories
 - Replaces Ancient Debris with Netherrack when mined or generated
-- Restores replaced Ancient Debris when needed
+- **Performance-Optimized** - Control whether replaced Ancient Debris is restored on plugin disable
 - Customizable Netherite item detection
 - Fully compatible with Folia 1.21.4 using region-aware schedulers
 - In-game commands to manage all settings
@@ -98,6 +98,26 @@ anti-netherite:
     ensure-chunks-loaded: true
   
   # ==============================
+  # PERFORMANCE SETTINGS
+  # ==============================
+  
+  performance:
+    # Should we restore Ancient Debris when the plugin is disabled?
+    # WARNING: This can cause significant lag if there are many replaced blocks
+    # If false, Ancient Debris will remain as Netherrack when the plugin is disabled
+    restore-debris-on-disable: false
+    
+    # Should we restore Ancient Debris when the configuration changes?
+    # WARNING: This can cause significant lag if there are many replaced blocks
+    # If false, Ancient Debris will remain as Netherrack when the configuration changes
+    restore-debris-on-config-change: false
+    
+    # Maximum number of Ancient Debris to replace per chunk to prevent lag
+    # Higher values may cause more lag but will replace more Ancient Debris
+    # Lower values will reduce lag but may leave some Ancient Debris unreplaced
+    max-replacements-per-chunk: 50
+  
+  # ==============================
   # DETECTION SETTINGS
   # ==============================
   
@@ -170,6 +190,11 @@ Every setting in the configuration file can be adjusted through these commands. 
 - `only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
 - `ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
 
+**Performance settings:**
+- `performance.restore-debris-on-disable` - Enable/disable restoring Ancient Debris when the plugin is disabled (true/false)
+- `performance.restore-debris-on-config-change` - Enable/disable restoring Ancient Debris when config changes (true/false)
+- `performance.max-replacements-per-chunk` - Set the maximum number of Ancient Debris replacements per chunk (integer)
+
 **Detection settings:**
 - `detection.use-name-matching` - Enable/disable name-based detection of Netherite items (true/false)
 
@@ -213,29 +238,34 @@ These features can be toggled independently using the `replace-when-mined` and `
 
 ### Reversibility
 
-The plugin keeps track of all Ancient Debris that has been replaced with Netherrack. When either:
+The plugin keeps track of all Ancient Debris that has been replaced with Netherrack. By default, replaced Ancient Debris will NOT be automatically restored when the plugin is disabled or when configuration changes. This behavior can be controlled through the performance settings:
 
-- The plugin is disabled
-- The configuration options are turned off
-- The `/antinetherite restore-debris` command is used
+- `performance.restore-debris-on-disable`: Controls whether Ancient Debris is restored when the plugin is disabled
+- `performance.restore-debris-on-config-change`: Controls whether Ancient Debris is restored when configuration changes
 
-All replaced Ancient Debris will be restored to its original state, but only if the block is still Netherrack. This ensures that player-built structures are not affected.
+You can also manually restore all replaced Ancient Debris using the `/antinetherite restore-debris` command.
+
+### Performance Considerations
+
+The Ancient Debris replacement system includes several performance optimizations:
+
+- **Configurable Restoration**: By default, Ancient Debris is NOT restored when the plugin is disabled or when configuration changes, preventing potential lag spikes
+- **Replacement Limits**: The `performance.max-replacements-per-chunk` setting limits how many blocks can be replaced per chunk to prevent lag
+- **Selective Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
+- **Chunk Generation Checking**: Can be configured to only process chunks that have already been generated
+- **Chunk Loading Control**: Can be configured to ensure chunks are loaded when replacing or restoring Ancient Debris
 
 ### Safeguards
 
-The Ancient Debris replacement system includes several safeguards, all designed to be configurable:
+The Ancient Debris replacement system includes several safeguards:
 
 - **Thread Safety**: Uses thread-safe collections to prevent concurrent modification issues
 - **Error Handling**: Catches and logs exceptions without crashing the plugin
-- **Performance Optimization**: Limits the number of replacements per chunk to prevent lag
 - **Async Processing**: Performs restoration operations asynchronously to prevent server lag
 - **Cooldown System**: Prevents command spam with a cooldown period
 - **World-Specific Restoration**: Allows restoring Ancient Debris in specific worlds
 - **Storage Limits**: Prevents excessive memory usage by limiting the number of stored locations
-- **Nether-Only Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
 - **Persistent Storage**: Saves replaced locations to disk for recovery after server restarts
-- **Chunk Generation Checking**: Can be configured to only process chunks that have already been generated
-- **Chunk Loading Control**: Can be configured to ensure chunks are loaded when replacing or restoring Ancient Debris
 
 ## Compatibility
 

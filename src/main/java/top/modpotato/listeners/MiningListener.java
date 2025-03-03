@@ -15,6 +15,7 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import top.modpotato.util.DebrisStorage;
+import top.modpotato.config.Config;
 
 import java.util.logging.Logger;
 
@@ -27,9 +28,7 @@ public class MiningListener implements Listener {
     private final boolean replaceOnChunkLoad;
     private final boolean onlyReplaceGeneratedChunks;
     private final Logger logger;
-    
-    // Maximum number of Ancient Debris to replace per chunk to prevent lag
-    private static final int MAX_REPLACEMENTS_PER_CHUNK = 50;
+    private final Config config;
     
     /**
      * Creates a new MiningListener
@@ -37,15 +36,18 @@ public class MiningListener implements Listener {
      * @param replaceAncientDebris Whether to replace Ancient Debris when mined
      * @param replaceOnChunkLoad Whether to replace Ancient Debris when chunks are loaded
      * @param onlyReplaceGeneratedChunks Whether to only replace Ancient Debris in generated chunks
+     * @param config The plugin configuration
      */
     public MiningListener(DebrisStorage debrisStorage, 
                           boolean replaceAncientDebris, 
                           boolean replaceOnChunkLoad,
-                          boolean onlyReplaceGeneratedChunks) {
+                          boolean onlyReplaceGeneratedChunks,
+                          Config config) {
         this.debrisStorage = debrisStorage;
         this.replaceAncientDebris = replaceAncientDebris;
         this.replaceOnChunkLoad = replaceOnChunkLoad;
         this.onlyReplaceGeneratedChunks = onlyReplaceGeneratedChunks;
+        this.config = config;
         this.logger = Bukkit.getLogger();
     }
     
@@ -112,6 +114,7 @@ public class MiningListener implements Listener {
         
         try {
             int replacementCount = 0;
+            int maxReplacements = config.getMaxReplacementsPerChunk();
             
             // Get all blocks in the chunk
             for (int x = 0; x < 16; x++) {
@@ -119,11 +122,11 @@ public class MiningListener implements Listener {
                     // Ancient Debris only generates in the Nether between Y=8 and Y=119
                     for (int y = 8; y < 120; y++) {
                         // Limit the number of replacements per chunk to prevent lag
-                        if (replacementCount >= MAX_REPLACEMENTS_PER_CHUNK) {
+                        if (replacementCount >= maxReplacements) {
                             logger.warning("Too many Ancient Debris found in chunk at " + 
                                           event.getChunk().getX() + "," + event.getChunk().getZ() + 
                                           " in world " + world.getName() + 
-                                          ". Limiting replacements to " + MAX_REPLACEMENTS_PER_CHUNK);
+                                          ". Limiting replacements to " + maxReplacements);
                             return;
                         }
                         
