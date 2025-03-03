@@ -42,15 +42,3 @@ jobs:
       with:
         name: antinetherite-${{ env.VERSION }}
         path: build/libs
-        
-    - name: Create Release
-      if: github.event_name != 'pull_request'
-      uses: softprops/action-gh-release@v2
-      with:
-        name: Release ${{ env.COMMIT_COUNT }}
-        files: build/libs/*.jar
-        generate_release_notes: true
-        prerelease: true
-        tag_name: release-${{ github.run_number }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
