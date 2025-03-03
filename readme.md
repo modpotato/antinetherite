@@ -27,61 +27,78 @@ The plugin's behavior can be customized in the `config.yml` file:
 # This plugin prevents the use of Netherite items in your server
 # It is fully compatible with both regular Bukkit/Spigot/Paper servers and Folia
 
-# Netherite removal settings
+# Main plugin settings
 anti-netherite:
-  # CHECKS
-
-  # Should we clear netherite in the inventory of players?
-  # This feature is compatible with Folia using region-aware schedulers
-  clear: false
-
-  # Should we cancel crafting of netherite items?
-  # This prevents players from crafting any items containing netherite
-  cancel-craft: true
-
-  # Should we cancel equipping of netherite items?
-  # This prevents players from equipping netherite armor
-  cancel-equip: true
+  # ==============================
+  # INVENTORY PROTECTION SETTINGS
+  # ==============================
   
-  # Should we cancel attacking with netherite items?
-  # This prevents players from attacking with netherite weapons
-  cancel-attack: true
-
-  # Should we cancel picking up netherite items?
-  # This prevents players from picking up netherite items from the ground
-  cancel-pickup: true
+  inventory:
+    # Should we clear netherite in the inventory of players?
+    # This feature is compatible with Folia using region-aware schedulers
+    clear: false
+    
+    # Should we cancel moving netherite items in inventories?
+    # This prevents players from moving netherite items in their inventory
+    cancel-move: true
   
-  # Should we remove netherite items when dropped?
-  # This removes netherite items when players drop them
-  remove-dropped: true
+  # ==============================
+  # ITEM INTERACTION SETTINGS
+  # ==============================
   
-  # Should we cancel moving netherite items in inventories?
-  # This prevents players from moving netherite items in their inventory
-  cancel-inventory-move: true
+  interaction:
+    # Should we cancel crafting of netherite items?
+    # This prevents players from crafting any items containing netherite
+    cancel-craft: true
+    
+    # Should we cancel equipping of netherite items?
+    # This prevents players from equipping netherite armor
+    cancel-equip: true
+    
+    # Should we cancel attacking with netherite items?
+    # This prevents players from attacking with netherite weapons
+    cancel-attack: true
   
+  # ==============================
+  # ITEM PICKUP/DROP SETTINGS
+  # ==============================
+  
+  item-handling:
+    # Should we cancel picking up netherite items?
+    # This prevents players from picking up netherite items from the ground
+    cancel-pickup: true
+    
+    # Should we remove netherite items when dropped?
+    # This removes netherite items when players drop them
+    remove-dropped: true
+  
+  # ==============================
   # ANCIENT DEBRIS SETTINGS
+  # ==============================
   
-  # Should we replace Ancient Debris with Netherrack when mined?
-  # This prevents players from obtaining Ancient Debris
-  replace-ancient-debris: true
+  ancient-debris:
+    # Should we replace Ancient Debris with Netherrack when mined?
+    # This prevents players from obtaining Ancient Debris
+    replace-when-mined: true
+    
+    # Should we replace Ancient Debris with Netherrack when chunks are loaded?
+    # This prevents Ancient Debris from generating in the world
+    replace-on-chunk-load: true
+    
+    # Should we only replace Ancient Debris in chunks that are already generated?
+    # If true, only chunks that have been generated will be processed
+    # If false, all chunks will be processed regardless of generation status
+    only-replace-generated-chunks: true
+    
+    # Should we ensure chunks are loaded when trying to replace Ancient Debris?
+    # If true, chunks will be loaded if they are not already loaded
+    # If false, only already loaded chunks will be processed
+    ensure-chunks-loaded: true
   
-  # Should we replace Ancient Debris with Netherrack when chunks are loaded?
-  # This prevents Ancient Debris from generating in the world
-  replace-on-chunk-load: true
-
-  # Should we only replace Ancient Debris in chunks that are already generated?
-  # If true, only chunks that have been generated will be processed
-  # If false, all chunks will be processed regardless of generation status
-  only-replace-generated-chunks: true
-
-  # Should we ensure chunks are loaded when trying to replace Ancient Debris?
-  # If true, chunks will be loaded if they are not already loaded
-  # If false, only already loaded chunks will be processed
-  ensure-chunks-loaded: true
-
+  # ==============================
   # DETECTION SETTINGS
+  # ==============================
   
-  # Settings for detecting Netherite items
   detection:
     # Should we use name matching to detect Netherite items?
     # If true, any item with a name containing "NETHERITE" will be considered a Netherite item
@@ -104,17 +121,20 @@ anti-netherite:
       - NETHERITE_BLOCK
       - NETHERITE_INGOT
       - NETHERITE_SCRAP
-
-  # TIMINGS
   
-  # Delay in seconds between each inventory check
-  # Higher values reduce server load but may allow players to keep netherite items longer
-  delay: 1
+  # ==============================
+  # TIMING SETTINGS
+  # ==============================
   
-  # Multiply the delay by this number to get the actual delay in ticks
-  # 20 ticks = 1 second, so the default is 1 second between checks
-  # This is used for both Bukkit and Folia schedulers
-  multiplier: 20
+  timing:
+    # Delay in seconds between each inventory check
+    # Higher values reduce server load but may allow players to keep netherite items longer
+    delay: 1
+    
+    # Multiply the delay by this number to get the actual delay in ticks
+    # 20 ticks = 1 second, so the default is 1 second between checks
+    # This is used for both Bukkit and Folia schedulers
+    multiplier: 20
 ```
 
 ## Commands
@@ -127,19 +147,31 @@ The plugin provides the following commands:
 - `/antinetherite get <setting>` - Get a configuration value
 - `/antinetherite set <setting> <value>` - Set a configuration value
 
-Available settings:
+Available settings are organized by category:
+
+**Inventory settings:**
 - `clear` - Enable/disable clearing Netherite from inventories (true/false)
+- `cancel-inventory-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
+
+**Interaction settings:**
 - `cancel-craft` - Enable/disable canceling Netherite crafting (true/false)
 - `cancel-equip` - Enable/disable preventing Netherite armor equipping (true/false)
 - `cancel-attack` - Enable/disable preventing attacks with Netherite weapons (true/false)
+
+**Item handling settings:**
 - `cancel-pickup` - Enable/disable preventing picking up Netherite items (true/false)
 - `remove-dropped` - Enable/disable removing dropped Netherite items (true/false)
-- `cancel-inventory-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
+
+**Ancient debris settings:**
 - `replace-ancient-debris` - Enable/disable replacing Ancient Debris with Netherrack when mined (true/false)
 - `replace-on-chunk-load` - Enable/disable replacing Ancient Debris with Netherrack when chunks are loaded (true/false)
 - `only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
 - `ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
+
+**Detection settings:**
 - `detection.use-name-matching` - Enable/disable name-based detection of Netherite items (true/false)
+
+**Timing settings:**
 - `delay` - Set the delay between inventory checks (in seconds)
 - `multiplier` - Set the tick multiplier (20 = 1 second)
 
