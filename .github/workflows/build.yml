@@ -30,6 +30,9 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_ENV
         sed -i "s/version = \"[^\"]*\"/version = \"$VERSION\"/" build.gradle.kts
     
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+    
     - name: Build with Gradle
       run: ./gradlew build
       
