@@ -90,8 +90,10 @@ public class MiningListener implements Listener {
                 debrisStorage.addLocation(block.getLocation());
             }
             
-            // Notify the player
-            player.sendMessage(Component.text("Ancient Debris has been converted to Netherrack!").color(NamedTextColor.RED));
+            // Notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Ancient Debris has been converted to Netherrack!").color(NamedTextColor.RED));
+            }
             
             // Cancel the event
             event.setCancelled(true);

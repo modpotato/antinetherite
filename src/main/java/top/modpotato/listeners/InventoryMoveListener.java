@@ -48,7 +48,11 @@ public class InventoryMoveListener implements Listener {
         ItemStack currentItem = event.getCurrentItem();
         if (currentItem != null && netheriteDetector.isNetheriteItem(currentItem)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
             return;
         }
         
@@ -56,7 +60,11 @@ public class InventoryMoveListener implements Listener {
         ItemStack cursorItem = event.getCursor();
         if (cursorItem != null && netheriteDetector.isNetheriteItem(cursorItem)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
     
@@ -77,7 +85,11 @@ public class InventoryMoveListener implements Listener {
         ItemStack draggedItem = event.getOldCursor();
         if (draggedItem != null && netheriteDetector.isNetheriteItem(draggedItem)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Moving Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
 } 

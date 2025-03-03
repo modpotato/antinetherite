@@ -191,6 +191,7 @@ public class NetheriteRemover {
             // Non-destructive mode: Notify player but don't remove items
             int count = countNetheriteItems(player);
             if (count > 0) {
+                // Always notify for non-destructive actions since we're not actually removing items
                 player.sendMessage(Component.text("You have " + count + " Netherite items in your inventory that are not allowed on this server.").color(NamedTextColor.RED));
                 removedCount.addAndGet(count);
             }
@@ -203,12 +204,15 @@ public class NetheriteRemover {
      * @param removedCount Counter for removed items
      */
     private void removeNetheriteItems(Player player, AtomicInteger removedCount) {
+        int itemsRemoved = 0;
+        
         // Check main inventory
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
             if (item != null && netheriteDetector.isNetheriteItem(item)) {
                 player.getInventory().setItem(i, null);
                 removedCount.incrementAndGet();
+                itemsRemoved++;
             }
         }
         
@@ -219,15 +223,19 @@ public class NetheriteRemover {
                 if (item.equals(player.getInventory().getHelmet())) {
                     player.getInventory().setHelmet(null);
                     removedCount.incrementAndGet();
+                    itemsRemoved++;
                 } else if (item.equals(player.getInventory().getChestplate())) {
                     player.getInventory().setChestplate(null);
                     removedCount.incrementAndGet();
+                    itemsRemoved++;
                 } else if (item.equals(player.getInventory().getLeggings())) {
                     player.getInventory().setLeggings(null);
                     removedCount.incrementAndGet();
+                    itemsRemoved++;
                 } else if (item.equals(player.getInventory().getBoots())) {
                     player.getInventory().setBoots(null);
                     removedCount.incrementAndGet();
+                    itemsRemoved++;
                 }
             }
         }
@@ -237,6 +245,12 @@ public class NetheriteRemover {
         if (offhand != null && netheriteDetector.isNetheriteItem(offhand)) {
             player.getInventory().setItemInOffHand(null);
             removedCount.incrementAndGet();
+            itemsRemoved++;
+        }
+        
+        // Always notify for destructive actions
+        if (itemsRemoved > 0) {
+            player.sendMessage(Component.text("Removed " + itemsRemoved + " Netherite items from your inventory.").color(NamedTextColor.RED));
         }
     }
     

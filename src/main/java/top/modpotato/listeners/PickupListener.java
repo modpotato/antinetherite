@@ -46,7 +46,11 @@ public class PickupListener implements Listener {
         ItemStack item = event.getItem().getItemStack();
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Picking up Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Picking up Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
 } 

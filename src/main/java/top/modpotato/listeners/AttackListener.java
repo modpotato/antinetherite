@@ -47,7 +47,11 @@ public class AttackListener implements Listener {
 
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Attacking with Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Attacking with Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
 }

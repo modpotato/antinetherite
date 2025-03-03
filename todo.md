@@ -1,0 +1,3 @@
+- [ ] mysql/sqlite support
+- [ ] config for whitelisted worlds
+- [ ] config for ignored players

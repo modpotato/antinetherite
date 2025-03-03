@@ -47,6 +47,7 @@ public class Config {
     private boolean logDebrisReplacements;
     private boolean logInventoryRemovals;
     private boolean ignoreCreativeSpectator;
+    private boolean notifyPlayers;
     
     /**
      * Creates a new Config instance
@@ -102,6 +103,7 @@ public class Config {
         logDebrisReplacements = config.getBoolean("anti-netherite.advanced.log-debris-replacements", true);
         logInventoryRemovals = config.getBoolean("anti-netherite.advanced.log-inventory-removals", true);
         ignoreCreativeSpectator = config.getBoolean("anti-netherite.advanced.ignore-creative-spectator", false);
+        notifyPlayers = config.getBoolean("anti-netherite.advanced.notify-players", true);
         
         // Load Netherite detection settings
         useNameMatching = config.getBoolean("anti-netherite.detection.use-name-matching", true);
@@ -319,6 +321,14 @@ public class Config {
      */
     public boolean isIgnoreCreativeSpectator() {
         return ignoreCreativeSpectator;
+    }
+    
+    /**
+     * Gets whether to notify players when their actions are blocked
+     * @return true if notifying players, false otherwise
+     */
+    public boolean isNotifyPlayers() {
+        return notifyPlayers;
     }
     
     /**

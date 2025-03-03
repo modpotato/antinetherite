@@ -113,6 +113,7 @@ anti-netherite:
     # Maximum number of Ancient Debris locations to store per world
     # Higher values use more memory but allow tracking more replaced blocks
     # Lower values use less memory but may limit the number of blocks that can be restored
+    # Set to -1 to remove the limit entirely (not recommended for large worlds)
     max-locations-per-world: 10000
     
     # Cooldown in seconds between command executions
@@ -133,6 +134,11 @@ anti-netherite:
     # If true, players in creative or spectator mode will not be affected by the plugin
     # If false, all players will be affected regardless of game mode
     ignore-creative-spectator: false
+    
+    # Should we send notification messages to players?
+    # If true, players will be notified when the plugin blocks their actions
+    # If false, players will only be notified for destructive actions (item removal, etc.)
+    notify-players: true
   
   # ==============================
   # DETECTION SETTINGS

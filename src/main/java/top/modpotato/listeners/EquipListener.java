@@ -51,7 +51,11 @@ public class EquipListener implements Listener {
         ItemStack item = event.getCursor();
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Equipping Netherite armor is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Equipping Netherite armor is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
 }

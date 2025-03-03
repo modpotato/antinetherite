@@ -46,7 +46,11 @@ public class CraftListener implements Listener {
         ItemStack result = event.getRecipe().getResult();
         if (netheriteDetector.isNetheriteItem(result)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Crafting Netherite items is not allowed!").color(NamedTextColor.RED));
+            
+            // Only notify the player if configured to do so
+            if (config.isNotifyPlayers()) {
+                player.sendMessage(Component.text("Crafting Netherite items is not allowed!").color(NamedTextColor.RED));
+            }
         }
     }
 }

@@ -76,7 +76,7 @@ public class DebrisStorage {
                     
                     // Limit the number of locations to prevent memory issues
                     int maxLocations = config.getMaxLocationsPerWorld();
-                    if (locations.size() > maxLocations) {
+                    if (maxLocations != -1 && locations.size() > maxLocations) {
                         plugin.getLogger().warning("Too many Ancient Debris locations stored for world " + worldUUID + 
                                                   ". Limiting to " + maxLocations);
                         locations = locations.subList(0, maxLocations);
@@ -172,7 +172,8 @@ public class DebrisStorage {
         
         // Check if we've reached the maximum number of locations for this world
         List<String> worldLocations = replacedLocations.get(worldUUID);
-        if (worldLocations.size() >= config.getMaxLocationsPerWorld()) {
+        int maxLocations = config.getMaxLocationsPerWorld();
+        if (maxLocations != -1 && worldLocations.size() >= maxLocations) {
             plugin.getLogger().warning("Maximum number of Ancient Debris locations reached for world " + 
                                       world.getName() + ". Skipping location: " + locString);
             return false;
