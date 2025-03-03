@@ -19,6 +19,8 @@ The plugin offers both destructive and non-destructive modes. In destructive mod
 - **Performance-Optimized** - Control whether replaced Ancient Debris is restored on plugin disable
 - **Fine-Grained Control** - Advanced settings for memory usage, logging, and more
 - Customizable Netherite item detection
+- **Creative/Spectator Mode Exclusion** - Optionally ignore players in creative or spectator mode
+- **Configurable Player Notifications** - Control whether players are notified of blocked actions
 - Fully compatible with Folia 1.21.4 using region-aware schedulers
 - In-game commands to manage all settings
 - Hot reload support for configuration changes without server restart
@@ -100,6 +102,7 @@ anti-netherite:
     
     # Should we replace Ancient Debris with Netherrack when chunks are loaded?
     # This prevents Ancient Debris from generating in the world
+    # THIS MAY CAUSE LAG ON FIRST LOAD
     replace-on-chunk-load: true
     
     # Should we only replace Ancient Debris in chunks that are already generated?
@@ -111,6 +114,12 @@ anti-netherite:
     # If true, chunks will be loaded if they are not already loaded
     # If false, only already loaded chunks will be processed
     ensure-chunks-loaded: true
+    
+    # Should we save the locations of replaced Ancient Debris?
+    # If true, the plugin will track and save replaced Ancient Debris locations
+    # If false, Ancient Debris will be replaced but not tracked or saved
+    # Setting this to false will prevent restoration of Ancient Debris
+    save-replaced-locations: true
   
   # ==============================
   # PERFORMANCE SETTINGS
@@ -130,6 +139,7 @@ anti-netherite:
     # Maximum number of Ancient Debris to replace per chunk to prevent lag
     # Higher values may cause more lag but will replace more Ancient Debris
     # Lower values will reduce lag but may leave some Ancient Debris unreplaced
+    # Set to -1 to remove the limit entirely (not recommended for performance)
     max-replacements-per-chunk: 50
   
   # ==============================
@@ -140,6 +150,7 @@ anti-netherite:
     # Maximum number of Ancient Debris locations to store per world
     # Higher values use more memory but allow tracking more replaced blocks
     # Lower values use less memory but may limit the number of blocks that can be restored
+    # Set to -1 to remove the limit entirely (not recommended for large worlds)
     max-locations-per-world: 10000
     
     # Cooldown in seconds between command executions
@@ -155,6 +166,16 @@ anti-netherite:
     # If true, a message will be logged each time Netherite items are removed
     # If false, only summary messages will be logged
     log-inventory-removals: true
+    
+    # Should we ignore players in creative or spectator mode?
+    # If true, players in creative or spectator mode will not be affected by the plugin
+    # If false, all players will be affected regardless of game mode
+    ignore-creative-spectator: false
+    
+    # Should we send notification messages to players?
+    # If true, players will be notified when the plugin blocks their actions
+    # If false, players will only be notified for destructive actions (item removal, etc.)
+    notify-players: true
   
   # ==============================
   # DETECTION SETTINGS
@@ -231,17 +252,20 @@ Every setting in the configuration file can be adjusted through these commands. 
 - `ancient-debris.replace-on-chunk-load` - Enable/disable replacing Ancient Debris with Netherrack when chunks are loaded (true/false)
 - `ancient-debris.only-replace-generated-chunks` - Enable/disable only replacing Ancient Debris in generated chunks (true/false)
 - `ancient-debris.ensure-chunks-loaded` - Enable/disable ensuring chunks are loaded when replacing Ancient Debris (true/false)
+- `ancient-debris.save-replaced-locations` - Enable/disable saving locations of replaced Ancient Debris (true/false)
 
 **Performance settings:**
 - `performance.restore-debris-on-disable` - Enable/disable restoring Ancient Debris when the plugin is disabled (true/false)
 - `performance.restore-debris-on-config-change` - Enable/disable restoring Ancient Debris when config changes (true/false)
-- `performance.max-replacements-per-chunk` - Set the maximum number of Ancient Debris replacements per chunk (integer)
+- `performance.max-replacements-per-chunk` - Set the maximum number of Ancient Debris replacements per chunk (integer, -1 for unlimited)
 
 **Advanced settings:**
-- `advanced.max-locations-per-world` - Set the maximum number of Ancient Debris locations to store per world (integer)
+- `advanced.max-locations-per-world` - Set the maximum number of Ancient Debris locations to store per world (integer, -1 for unlimited)
 - `advanced.command-cooldown-seconds` - Set the cooldown between command executions (integer)
 - `advanced.log-debris-replacements` - Enable/disable logging Ancient Debris replacements (true/false)
 - `advanced.log-inventory-removals` - Enable/disable logging Netherite item removals (true/false)
+- `advanced.ignore-creative-spectator` - Enable/disable ignoring players in creative or spectator mode (true/false)
+- `advanced.notify-players` - Enable/disable notifying players when their actions are blocked (true/false)
 
 **Detection settings:**
 - `detection.use-name-matching` - Enable/disable name-based detection of Netherite items (true/false)
