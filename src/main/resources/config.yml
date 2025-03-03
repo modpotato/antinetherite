@@ -6,6 +6,17 @@
 # Main plugin settings
 anti-netherite:
   # ==============================
+  # GLOBAL SETTINGS
+  # ==============================
+  
+  global:
+    # Should we enable destructive actions?
+    # If true, the plugin will delete/remove items when appropriate
+    # If false, the plugin will only cancel events without destroying items
+    # This affects item drops, inventory clearing, and other destructive operations
+    enable-destructive-actions: true
+  
+  # ==============================
   # INVENTORY PROTECTION SETTINGS
   # ==============================
   
@@ -128,6 +139,7 @@ anti-netherite:
     # List of items to consider as Netherite items
     # These are Bukkit Material enum names
     # You can add custom items here if needed
+    # The item names follow the format of the Bukkit Material enum
     items:
       - NETHERITE_SWORD
       - NETHERITE_PICKAXE

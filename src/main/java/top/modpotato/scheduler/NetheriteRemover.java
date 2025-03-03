@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 /**
  * Scheduler for removing Netherite items from player inventories
  */
@@ -174,6 +177,25 @@ public class NetheriteRemover {
             return;
         }
         
+        if (config.isEnableDestructiveActions()) {
+            // Destructive mode: Remove items from inventory
+            removeNetheriteItems(player, removedCount);
+        } else {
+            // Non-destructive mode: Notify player but don't remove items
+            int count = countNetheriteItems(player);
+            if (count > 0) {
+                player.sendMessage(Component.text("You have " + count + " Netherite items in your inventory that are not allowed on this server.").color(NamedTextColor.RED));
+                removedCount.addAndGet(count);
+            }
+        }
+    }
+    
+    /**
+     * Removes Netherite items from a player's inventory
+     * @param player The player to check
+     * @param removedCount Counter for removed items
+     */
+    private void removeNetheriteItems(Player player, AtomicInteger removedCount) {
         // Check main inventory
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
@@ -209,5 +231,36 @@ public class NetheriteRemover {
             player.getInventory().setItemInOffHand(null);
             removedCount.incrementAndGet();
         }
+    }
+    
+    /**
+     * Counts Netherite items in a player's inventory
+     * @param player The player to check
+     * @return The number of Netherite items found
+     */
+    private int countNetheriteItems(Player player) {
+        int count = 0;
+        
+        // Check main inventory
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && netheriteDetector.isNetheriteItem(item)) {
+                count++;
+            }
+        }
+        
+        // Check armor slots
+        for (ItemStack item : player.getInventory().getArmorContents()) {
+            if (item != null && netheriteDetector.isNetheriteItem(item)) {
+                count++;
+            }
+        }
+        
+        // Check offhand
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (offhand != null && netheriteDetector.isNetheriteItem(offhand)) {
+            count++;
+        }
+        
+        return count;
     }
 } 

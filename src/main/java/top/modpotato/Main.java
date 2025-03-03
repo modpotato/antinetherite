@@ -134,7 +134,7 @@ public class Main extends JavaPlugin {
                 getServer().getPluginManager().registerEvents(pickupListener, this);
             }
             
-            dropListener = new DropListener(config.isRemoveDropped(), netheriteDetector);
+            dropListener = new DropListener(config.isRemoveDropped(), netheriteDetector, config);
             getServer().getPluginManager().registerEvents(dropListener, this);
             
             if (config.isCancelInventoryMove()) {

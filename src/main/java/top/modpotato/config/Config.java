@@ -22,6 +22,9 @@ public class Config {
     private boolean removeDropped;
     private boolean cancelInventoryMove;
     
+    // Global settings
+    private boolean enableDestructiveActions;
+    
     // Netherite detection settings
     private boolean useNameMatching;
     private List<String> netheriteItemsList;
@@ -58,6 +61,9 @@ public class Config {
     public void reload() {
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
+        
+        // Load global settings
+        enableDestructiveActions = config.getBoolean("anti-netherite.global.enable-destructive-actions", true);
         
         // Load timing settings
         delay = config.getInt("anti-netherite.timing.delay", 1);
@@ -144,6 +150,14 @@ public class Config {
      */
     public int getDelayTicks() {
         return delay * multiplier;
+    }
+    
+    /**
+     * Gets whether destructive actions are enabled
+     * @return true if destructive actions are enabled, false otherwise
+     */
+    public boolean isEnableDestructiveActions() {
+        return enableDestructiveActions;
     }
     
     // Getters

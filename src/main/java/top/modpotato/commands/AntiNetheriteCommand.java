@@ -6,19 +6,14 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.util.StringUtil;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import top.modpotato.Main;
-import top.modpotato.util.NetheriteDetector;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,8 +25,6 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     
     // Map of user-friendly setting names to actual config paths
     private final Map<String, String> SETTINGS_MAP = new HashMap<>();
-    
-    private final List<String> BOOLEAN_VALUES = Arrays.asList("true", "false");
     
     // Track when the last restore command was used to prevent spam
     private long lastRestoreTime = 0;
@@ -211,33 +204,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 
                 return true;
             case "get":
-                if (args.length < 2) {
-                    sender.sendMessage(Component.text("Usage: /antinetherite get <setting>").color(NamedTextColor.RED));
-                    return true;
-                }
-                
-                if (args[1].equals("detection.items")) {
-                    // Special handling for the items list
-                    NetheriteDetector detector = plugin.getNetheriteDetector();
-                    Set<String> items = detector.getNetheriteItemNames();
-                    sender.sendMessage(Component.text("Netherite items: " + String.join(", ", items)).color(NamedTextColor.GREEN));
-                    return true;
-                }
-                
-                // Get the actual config path from the user-friendly name
-                String configPath = SETTINGS_MAP.get(args[1]);
-                if (configPath == null) {
-                    sender.sendMessage(Component.text("Setting not found: " + args[1]).color(NamedTextColor.RED));
-                    return true;
-                }
-                
-                Object value = plugin.getConfigValue(configPath);
-                if (value == null) {
-                    sender.sendMessage(Component.text("Setting not found: " + args[1]).color(NamedTextColor.RED));
-                } else {
-                    sender.sendMessage(Component.text(args[1] + " = " + value).color(NamedTextColor.GREEN));
-                }
-                return true;
+                return handleGetCommand(sender, args);
             case "set":
                 if (args.length < 3) {
                     sender.sendMessage(Component.text("Usage: /antinetherite set <setting> <value>").color(NamedTextColor.RED));
@@ -376,47 +343,278 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
         
-        if (!sender.hasPermission("antinetherite.manage")) {
-            return completions;
-        }
-        
         if (args.length == 1) {
-            List<String> commands = Arrays.asList("reload", "restore-debris", "debris-info", "get", "set");
-            StringUtil.copyPartialMatches(args[0], commands, completions);
-        } else if (args.length == 2) {
+            completions.add("reload");
+            completions.add("restore-debris");
+            completions.add("debris-info");
+            completions.add("get");
+            completions.add("set");
+            return filterCompletions(completions, args[0]);
+        }
+        
+        if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("get") || args[0].equalsIgnoreCase("set")) {
+                // Add global settings
+                completions.add("global.enable-destructive-actions");
+                
+                // Add inventory settings
+                completions.add("inventory.clear");
+                completions.add("inventory.cancel-move");
+                
+                // Add interaction settings
+                completions.add("interaction.cancel-craft");
+                completions.add("interaction.cancel-equip");
+                completions.add("interaction.cancel-attack");
+                
+                // Add item handling settings
+                completions.add("item-handling.cancel-pickup");
+                completions.add("item-handling.remove-dropped");
+                
+                // Add ancient debris settings
+                completions.add("ancient-debris.replace-when-mined");
+                completions.add("ancient-debris.replace-on-chunk-load");
+                completions.add("ancient-debris.only-replace-generated-chunks");
+                completions.add("ancient-debris.ensure-chunks-loaded");
+                
+                // Add performance settings
+                completions.add("performance.restore-debris-on-disable");
+                completions.add("performance.restore-debris-on-config-change");
+                completions.add("performance.max-replacements-per-chunk");
+                
+                // Add advanced settings
+                completions.add("advanced.max-locations-per-world");
+                completions.add("advanced.command-cooldown-seconds");
+                completions.add("advanced.log-debris-replacements");
+                completions.add("advanced.log-inventory-removals");
+                
+                // Add detection settings
+                completions.add("detection.use-name-matching");
+                completions.add("detection.items");
+                
+                // Add timing settings
+                completions.add("timing.delay");
+                completions.add("timing.multiplier");
+                
+                return filterCompletions(completions, args[1]);
+            }
+            
             if (args[0].equalsIgnoreCase("restore-debris")) {
-                // Tab complete for world names
-                List<String> worldNames = new ArrayList<>();
                 for (World world : Bukkit.getWorlds()) {
-                    // Only include worlds that have stored locations
-                    if (plugin.getDebrisStorage().getWorldLocationsCount(world) > 0) {
-                        worldNames.add(world.getName());
-                    }
+                    completions.add(world.getName());
                 }
-                StringUtil.copyPartialMatches(args[1], worldNames, completions);
-            } else if (args[0].equalsIgnoreCase("get") || args[0].equalsIgnoreCase("set")) {
-                List<String> allSettings = new ArrayList<>(SETTINGS_MAP.keySet());
-                allSettings.add("detection.items");
-                StringUtil.copyPartialMatches(args[1], allSettings, completions);
-            }
-        } else if (args.length == 3) {
-            if (args[0].equalsIgnoreCase("set")) {
-                if (isBooleanSetting(args[1])) {
-                    StringUtil.copyPartialMatches(args[2], BOOLEAN_VALUES, completions);
-                } else if (args[1].equals("detection.items")) {
-                    StringUtil.copyPartialMatches(args[2], Arrays.asList("add", "remove"), completions);
-                }
-            }
-        } else if (args.length == 4) {
-            if (args[0].equalsIgnoreCase("set") && args[1].equals("detection.items") && args[2].equals("remove")) {
-                // Tab complete for removing items - show current items
-                NetheriteDetector detector = plugin.getNetheriteDetector();
-                Set<String> items = detector.getNetheriteItemNames();
-                StringUtil.copyPartialMatches(args[3], items, completions);
+                return filterCompletions(completions, args[1]);
             }
         }
         
-        Collections.sort(completions);
+        if (args.length == 3) {
+            if (args[0].equalsIgnoreCase("set")) {
+                String setting = args[1].toLowerCase();
+                
+                // Special handling for detection.items
+                if (setting.equals("detection.items")) {
+                    completions.add("add");
+                    completions.add("remove");
+                    return filterCompletions(completions, args[2]);
+                }
+                
+                // For boolean settings
+                if (setting.contains("cancel") || 
+                    setting.contains("remove") || 
+                    setting.contains("replace") || 
+                    setting.contains("ensure") || 
+                    setting.contains("restore") || 
+                    setting.contains("log") || 
+                    setting.contains("use-name") ||
+                    setting.contains("enable-destructive")) {
+                    completions.add("true");
+                    completions.add("false");
+                    return filterCompletions(completions, args[2]);
+                }
+                
+                // For integer settings
+                if (setting.contains("delay") || 
+                    setting.contains("multiplier") || 
+                    setting.contains("max-")) {
+                    // Suggest some reasonable values
+                    if (setting.contains("delay")) {
+                        completions.add("1");
+                        completions.add("5");
+                        completions.add("10");
+                    } else if (setting.contains("multiplier")) {
+                        completions.add("10");
+                        completions.add("20");
+                        completions.add("40");
+                    } else if (setting.contains("max-replacements")) {
+                        completions.add("25");
+                        completions.add("50");
+                        completions.add("100");
+                    } else if (setting.contains("max-locations")) {
+                        completions.add("5000");
+                        completions.add("10000");
+                        completions.add("20000");
+                    } else if (setting.contains("cooldown")) {
+                        completions.add("1");
+                        completions.add("5");
+                        completions.add("10");
+                    }
+                    return filterCompletions(completions, args[2]);
+                }
+            }
+        }
+        
         return completions;
+    }
+
+    /**
+     * Handles the /antinetherite get command
+     * @param sender The command sender
+     * @param args The command arguments
+     * @return true if the command was handled, false otherwise
+     */
+    private boolean handleGetCommand(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /antinetherite get <setting>").color(NamedTextColor.RED));
+            return true;
+        }
+        
+        String setting = args[1].toLowerCase();
+        
+        // Handle special case for detection.items
+        if (setting.equals("detection.items")) {
+            List<String> items = (List<String>) plugin.getConfigValue("anti-netherite.detection.items");
+            sender.sendMessage(Component.text("Netherite items list:").color(NamedTextColor.GREEN));
+            for (String item : items) {
+                sender.sendMessage(Component.text("- " + item).color(NamedTextColor.YELLOW));
+            }
+            return true;
+        }
+        
+        // Map setting to config path
+        String configPath = getConfigPath(setting);
+        if (configPath == null) {
+            sender.sendMessage(Component.text("Unknown setting: " + setting).color(NamedTextColor.RED));
+            return true;
+        }
+        
+        // Get the value
+        Object value = plugin.getConfigValue(configPath);
+        if (value == null) {
+            sender.sendMessage(Component.text("Setting not found: " + setting).color(NamedTextColor.RED));
+            return true;
+        }
+        
+        sender.sendMessage(Component.text(setting + " = " + value).color(NamedTextColor.GREEN));
+        return true;
+    }
+    
+    /**
+     * Maps a setting name to a config path
+     * @param setting The setting name
+     * @return The config path, or null if not found
+     */
+    private String getConfigPath(String setting) {
+        switch (setting) {
+            // Global settings
+            case "global.enable-destructive-actions":
+                return "anti-netherite.global.enable-destructive-actions";
+                
+            // Inventory settings
+            case "inventory.clear":
+            case "clear":
+                return "anti-netherite.inventory.clear";
+            case "inventory.cancel-move":
+            case "cancel-inventory-move":
+                return "anti-netherite.inventory.cancel-move";
+                
+            // Interaction settings
+            case "interaction.cancel-craft":
+            case "cancel-craft":
+                return "anti-netherite.interaction.cancel-craft";
+            case "interaction.cancel-equip":
+            case "cancel-equip":
+                return "anti-netherite.interaction.cancel-equip";
+            case "interaction.cancel-attack":
+            case "cancel-attack":
+                return "anti-netherite.interaction.cancel-attack";
+                
+            // Item handling settings
+            case "item-handling.cancel-pickup":
+            case "cancel-pickup":
+                return "anti-netherite.item-handling.cancel-pickup";
+            case "item-handling.remove-dropped":
+            case "remove-dropped":
+                return "anti-netherite.item-handling.remove-dropped";
+                
+            // Ancient debris settings
+            case "ancient-debris.replace-when-mined":
+            case "replace-when-mined":
+                return "anti-netherite.ancient-debris.replace-when-mined";
+            case "ancient-debris.replace-on-chunk-load":
+            case "replace-on-chunk-load":
+                return "anti-netherite.ancient-debris.replace-on-chunk-load";
+            case "ancient-debris.only-replace-generated-chunks":
+            case "only-replace-generated-chunks":
+                return "anti-netherite.ancient-debris.only-replace-generated-chunks";
+            case "ancient-debris.ensure-chunks-loaded":
+            case "ensure-chunks-loaded":
+                return "anti-netherite.ancient-debris.ensure-chunks-loaded";
+                
+            // Performance settings
+            case "performance.restore-debris-on-disable":
+            case "restore-debris-on-disable":
+                return "anti-netherite.performance.restore-debris-on-disable";
+            case "performance.restore-debris-on-config-change":
+            case "restore-debris-on-config-change":
+                return "anti-netherite.performance.restore-debris-on-config-change";
+            case "performance.max-replacements-per-chunk":
+            case "max-replacements-per-chunk":
+                return "anti-netherite.performance.max-replacements-per-chunk";
+                
+            // Advanced settings
+            case "advanced.max-locations-per-world":
+            case "max-locations-per-world":
+                return "anti-netherite.advanced.max-locations-per-world";
+            case "advanced.command-cooldown-seconds":
+            case "command-cooldown-seconds":
+                return "anti-netherite.advanced.command-cooldown-seconds";
+            case "advanced.log-debris-replacements":
+            case "log-debris-replacements":
+                return "anti-netherite.advanced.log-debris-replacements";
+            case "advanced.log-inventory-removals":
+            case "log-inventory-removals":
+                return "anti-netherite.advanced.log-inventory-removals";
+                
+            // Detection settings
+            case "detection.use-name-matching":
+            case "use-name-matching":
+                return "anti-netherite.detection.use-name-matching";
+                
+            // Timing settings
+            case "timing.delay":
+            case "delay":
+                return "anti-netherite.timing.delay";
+            case "timing.multiplier":
+            case "multiplier":
+                return "anti-netherite.timing.multiplier";
+                
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Filters tab completions based on the input
+     * @param completions The list of completions
+     * @param input The input to filter by
+     * @return The filtered list of completions
+     */
+    private List<String> filterCompletions(List<String> completions, String input) {
+        List<String> filtered = new ArrayList<>();
+        for (String completion : completions) {
+            if (completion.toLowerCase().startsWith(input.toLowerCase())) {
+                filtered.add(completion);
+            }
+        }
+        return filtered;
     }
 } 

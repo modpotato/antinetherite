@@ -2,9 +2,12 @@
 
 AntiNetherite is a highly configurable Minecraft plugin designed to remove Netherite items from player inventories and prevent their crafting, equipping, and attacking with Netherite items. Every aspect of the plugin can be enabled, disabled, or fine-tuned to suit your server's needs.
 
+The plugin offers both destructive and non-destructive modes. In destructive mode (default), it will remove items from inventories and delete dropped items. In non-destructive mode, it will only prevent the use of Netherite items without destroying them, making it more player-friendly while still enforcing the server rules.
+
 ## Features
 
 - **Fully Configurable Protection System** - Every feature can be individually enabled or disabled
+- **Non-Destructive Mode Available** - Choose between removing items or just preventing their use
 - Periodically removes Netherite items from player inventories
 - Cancels the crafting of Netherite items
 - Prevents equipping Netherite armor
@@ -32,6 +35,17 @@ Every aspect of the plugin's behavior can be customized in the `config.yml` file
 
 # Main plugin settings
 anti-netherite:
+  # ==============================
+  # GLOBAL SETTINGS
+  # ==============================
+  
+  global:
+    # Should we enable destructive actions?
+    # If true, the plugin will delete/remove items when appropriate
+    # If false, the plugin will only cancel events without destroying items
+    # This affects item drops, inventory clearing, and other destructive operations
+    enable-destructive-actions: true
+  
   # ==============================
   # INVENTORY PROTECTION SETTINGS
   # ==============================
@@ -196,6 +210,9 @@ The plugin provides comprehensive commands to manage all settings in-game withou
 
 Every setting in the configuration file can be adjusted through these commands. Available settings are organized by category:
 
+**Global settings:**
+- `global.enable-destructive-actions` - Enable/disable destructive actions like removing items (true/false)
+
 **Inventory settings:**
 - `inventory.clear` - Enable/disable clearing Netherite from inventories (true/false)
 - `inventory.cancel-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
@@ -258,6 +275,27 @@ The plugin provides two fully configurable ways to detect Netherite items:
 2. **Custom List**: You can define a custom list of items to be considered as Netherite items. This is useful if you want to add custom items or only block specific Netherite items.
 
 You can toggle between these methods using the `detection.use-name-matching` setting. If set to `false`, only items in the custom list will be considered Netherite items.
+
+## Netherite Item Protection
+
+The plugin can prevent players from using Netherite items in several ways:
+
+1. **Destructive vs. Non-Destructive Mode**: The global setting `enable-destructive-actions` controls how the plugin handles Netherite items:
+   - In destructive mode (default), items are removed from inventories and deleted when dropped
+   - In non-destructive mode, events are cancelled but items are not destroyed, making it more player-friendly
+
+2. **Inventory Protection**: The plugin can prevent players from having Netherite items in their inventory:
+   - Clear items from player inventories periodically
+   - Prevent moving Netherite items in inventories
+   - Prevent picking up Netherite items from the ground
+   - Remove or prevent dropping Netherite items
+
+3. **Usage Prevention**: The plugin can prevent players from using Netherite items:
+   - Cancel crafting of Netherite items
+   - Prevent equipping Netherite armor
+   - Prevent attacking with Netherite weapons
+
+All of these features can be individually configured to create the exact protection system your server needs.
 
 ## Ancient Debris Replacement
 
