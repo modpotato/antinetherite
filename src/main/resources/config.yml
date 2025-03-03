@@ -9,7 +9,7 @@ anti-netherite:
     # If true, the plugin will delete/remove items when appropriate
     # If false, the plugin will only cancel events without destroying items
     # This affects item drops, inventory clearing, and other destructive operations
-    enable-destructive-actions: true
+    enable-destructive-actions: false
   
   # ==============================
   # INVENTORY PROTECTION SETTINGS
@@ -22,7 +22,7 @@ anti-netherite:
     
     # Should we cancel moving netherite items in inventories?
     # This prevents players from moving netherite items in their inventory
-    cancel-move: false
+    cancel-move: true
   
   # ==============================
   # ITEM INTERACTION SETTINGS
@@ -52,7 +52,7 @@ anti-netherite:
     
     # Should we remove netherite items when dropped?
     # This removes netherite items when players drop them
-    remove-dropped: true
+    remove-dropped: false
   
   # ==============================
   # ANCIENT DEBRIS SETTINGS
@@ -61,12 +61,12 @@ anti-netherite:
   ancient-debris:
     # Should we replace Ancient Debris with Netherrack when mined?
     # This prevents players from obtaining Ancient Debris
-    replace-when-mined: false
+    replace-when-mined: true
     
     # Should we replace Ancient Debris with Netherrack when chunks are loaded?
     # This prevents Ancient Debris from generating in the world
     # THIS MAY CAUSE LAG ON FIRST LOAD
-    replace-on-chunk-load: true
+    replace-on-chunk-load: false
     
     # Should we only replace Ancient Debris in chunks that are already generated?
     # If true, only chunks that have been generated will be processed
@@ -76,13 +76,13 @@ anti-netherite:
     # Should we ensure chunks are loaded when trying to replace Ancient Debris?
     # If true, chunks will be loaded if they are not already loaded
     # If false, only already loaded chunks will be processed
-    ensure-chunks-loaded: true
+    ensure-chunks-loaded: false
     
     # Should we save the locations of replaced Ancient Debris?
     # If true, the plugin will track and save replaced Ancient Debris locations
     # If false, Ancient Debris will be replaced but not tracked or saved
     # Setting this to false will prevent restoration of Ancient Debris
-    save-replaced-locations: true
+    save-replaced-locations: false
   
   # ==============================
   # PERFORMANCE SETTINGS
@@ -133,7 +133,7 @@ anti-netherite:
     # Should we ignore players in creative or spectator mode?
     # If true, players in creative or spectator mode will not be affected by the plugin
     # If false, all players will be affected regardless of game mode
-    ignore-creative-spectator: false
+    ignore-creative-spectator: true
     
     # Should we send notification messages to players?
     # If true, players will be notified when the plugin blocks their actions
@@ -167,7 +167,6 @@ anti-netherite:
       - NETHERITE_BLOCK
       - NETHERITE_INGOT
       - NETHERITE_SCRAP
-      - ANCIENT_DEBRIS
   
   # ==============================
   # TIMING SETTINGS
