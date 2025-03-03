@@ -27,7 +27,7 @@ public class Config {
     private List<String> netheriteItemsList;
     
     // Ancient Debris settings
-    private boolean replaceAncientDebris;
+    private boolean replaceWhenMined;
     private boolean replaceOnChunkLoad;
     private boolean onlyReplaceGeneratedChunks;
     private boolean ensureChunksLoaded;
@@ -77,7 +77,7 @@ public class Config {
         removeDropped = config.getBoolean("anti-netherite.item-handling.remove-dropped", true);
         
         // Load Ancient Debris settings
-        replaceAncientDebris = config.getBoolean("anti-netherite.ancient-debris.replace-when-mined", true);
+        replaceWhenMined = config.getBoolean("anti-netherite.ancient-debris.replace-when-mined", true);
         replaceOnChunkLoad = config.getBoolean("anti-netherite.ancient-debris.replace-on-chunk-load", true);
         onlyReplaceGeneratedChunks = config.getBoolean("anti-netherite.ancient-debris.only-replace-generated-chunks", true);
         ensureChunksLoaded = config.getBoolean("anti-netherite.ancient-debris.ensure-chunks-loaded", true);
@@ -201,10 +201,10 @@ public class Config {
     
     /**
      * Gets whether to replace Ancient Debris when mined
-     * @return true if replacing Ancient Debris, false otherwise
+     * @return true if replacing Ancient Debris when mined, false otherwise
      */
-    public boolean isReplaceAncientDebris() {
-        return replaceAncientDebris;
+    public boolean isReplaceWhenMined() {
+        return replaceWhenMined;
     }
     
     /**
@@ -248,14 +248,6 @@ public class Config {
     }
     
     /**
-     * Gets whether to ensure chunks are loaded when replacing Ancient Debris
-     * @return true if ensuring chunks are loaded, false otherwise
-     */
-    public boolean isEnsureChunksLoaded() {
-        return ensureChunksLoaded;
-    }
-    
-    /**
      * Gets the maximum number of locations to store per world
      * @return The maximum number of locations per world
      */
@@ -285,5 +277,23 @@ public class Config {
      */
     public boolean isLogInventoryRemovals() {
         return logInventoryRemovals;
+    }
+    
+    /**
+     * Gets whether to ensure chunks are loaded when replacing Ancient Debris
+     * @return true if ensuring chunks are loaded, false otherwise
+     */
+    public boolean isEnsureChunksLoaded() {
+        return ensureChunksLoaded;
+    }
+    
+    /**
+     * @deprecated Use {@link #isReplaceWhenMined()} instead
+     * Gets whether to replace Ancient Debris when mined
+     * @return true if replacing Ancient Debris, false otherwise
+     */
+    @Deprecated
+    public boolean isReplaceAncientDebris() {
+        return replaceWhenMined;
     }
 }

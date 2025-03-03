@@ -143,9 +143,9 @@ public class Main extends JavaPlugin {
             }
             
             // Register mining listener if either ancient debris replacement option is enabled
-            if (config.isReplaceAncientDebris() || config.isReplaceOnChunkLoad()) {
+            if (config.isReplaceWhenMined() || config.isReplaceOnChunkLoad()) {
                 miningListener = new MiningListener(debrisStorage, 
-                                                   config.isReplaceAncientDebris(), 
+                                                   config.isReplaceWhenMined(), 
                                                    config.isReplaceOnChunkLoad(),
                                                    config.isOnlyReplaceGeneratedChunks(),
                                                    config);
@@ -260,7 +260,7 @@ public class Main extends JavaPlugin {
         }
         
         try {
-            boolean oldReplaceAncientDebris = config.isReplaceAncientDebris();
+            boolean oldReplaceWhenMined = config.isReplaceWhenMined();
             boolean oldReplaceOnChunkLoad = config.isReplaceOnChunkLoad();
             
             // Reload config
@@ -276,8 +276,8 @@ public class Main extends JavaPlugin {
             
             // Restore Ancient Debris if explicitly configured to do so
             if (miningListener != null && 
-                (oldReplaceAncientDebris || oldReplaceOnChunkLoad) && 
-                (!config.isReplaceAncientDebris() && !config.isReplaceOnChunkLoad()) &&
+                (oldReplaceWhenMined || oldReplaceOnChunkLoad) && 
+                (!config.isReplaceWhenMined() && !config.isReplaceOnChunkLoad()) &&
                 config.isRestoreDebrisOnConfigChange()) {
                 getLogger().info("Restoring Ancient Debris blocks due to config change...");
                 int count = miningListener.restoreAllDebris();

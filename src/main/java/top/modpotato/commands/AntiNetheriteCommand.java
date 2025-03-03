@@ -97,11 +97,11 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 lastRestoreTime = currentTime;
                 
                 // Check if replacement features are enabled in config
-                boolean replaceAncientDebris = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
+                boolean replaceWhenMined = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
                 boolean replaceOnChunkLoad = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-on-chunk-load");
                 
                 // If both replacement features are disabled, check if there's anything to restore
-                if (!replaceAncientDebris && !replaceOnChunkLoad) {
+                if (!replaceWhenMined && !replaceOnChunkLoad) {
                     int totalLocations = plugin.getDebrisStorage().getTotalLocationsCount();
                     if (totalLocations == 0) {
                         sender.sendMessage(Component.text("Ancient Debris replacement is disabled and there are no stored locations to restore.").color(NamedTextColor.YELLOW));
@@ -200,12 +200,12 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 }
                 
                 // Show config status
-                boolean isReplaceAncientDebris = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
+                boolean isReplaceWhenMined = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
                 boolean isReplaceOnChunkLoad = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-on-chunk-load");
                 
                 sender.sendMessage(Component.text("Current config:").color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("- Replace when mined: " + (isReplaceAncientDebris ? "Enabled" : "Disabled")).color(
-                    isReplaceAncientDebris ? NamedTextColor.RED : NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("- Replace when mined: " + (isReplaceWhenMined ? "Enabled" : "Disabled")).color(
+                    isReplaceWhenMined ? NamedTextColor.RED : NamedTextColor.GREEN));
                 sender.sendMessage(Component.text("- Replace on chunk load: " + (isReplaceOnChunkLoad ? "Enabled" : "Disabled")).color(
                     isReplaceOnChunkLoad ? NamedTextColor.RED : NamedTextColor.GREEN));
                 
