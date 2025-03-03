@@ -8,8 +8,6 @@ import org.bukkit.scheduler.BukkitTask;
 import top.modpotato.Main;
 import top.modpotato.util.NetheriteDetector;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 /**
  * Handles the scheduling of netherite removal tasks
  * with compatibility for both Bukkit and Folia

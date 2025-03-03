@@ -12,27 +12,23 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import top.modpotato.util.DebrisStorage;
-import top.modpotato.util.NetheriteDetector;
 
 /**
  * Handles mining of Ancient Debris and converts it to Netherrack
  */
 public class MiningListener implements Listener {
-    private final NetheriteDetector netheriteDetector;
     private final DebrisStorage debrisStorage;
     private final boolean replaceAncientDebris;
     private final boolean replaceOnChunkLoad;
     
     /**
      * Creates a new MiningListener
-     * @param netheriteDetector The Netherite detector
      * @param debrisStorage The debris storage
      * @param replaceAncientDebris Whether to replace Ancient Debris when mined
      * @param replaceOnChunkLoad Whether to replace Ancient Debris when chunks are loaded
      */
-    public MiningListener(NetheriteDetector netheriteDetector, DebrisStorage debrisStorage, 
+    public MiningListener(DebrisStorage debrisStorage, 
                           boolean replaceAncientDebris, boolean replaceOnChunkLoad) {
-        this.netheriteDetector = netheriteDetector;
         this.debrisStorage = debrisStorage;
         this.replaceAncientDebris = replaceAncientDebris;
         this.replaceOnChunkLoad = replaceOnChunkLoad;

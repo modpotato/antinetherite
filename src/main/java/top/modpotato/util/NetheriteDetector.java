@@ -2,6 +2,8 @@ package top.modpotato.util;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
+
+import net.kyori.adventure.text.Component;
 import top.modpotato.config.Config;
 
 import java.util.HashSet;
@@ -88,9 +90,9 @@ public class NetheriteDetector {
             
             // Check if the item has a display name that contains any of the custom names
             if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                String displayName = item.getItemMeta().getDisplayName();
+                Component displayName = item.getItemMeta().displayName();
                 for (String netheriteItemName : netheriteItemNames) {
-                    if (displayName.contains(netheriteItemName)) {
+                    if (displayName.toString().contains(netheriteItemName)) {
                         return true;
                     }
                 }
