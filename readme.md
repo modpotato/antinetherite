@@ -30,11 +30,6 @@ The plugin offers both destructive and non-destructive modes. In destructive mod
 Every aspect of the plugin's behavior can be customized in the `config.yml` file. All features can be individually enabled or disabled, allowing you to create the exact protection system your server needs:
 
 ```yaml
-# AntiNetherite Configuration
-# 
-# This plugin prevents the use of Netherite items in your server
-# It is fully compatible with both regular Bukkit/Spigot/Paper servers and Folia
-
 # Main plugin settings
 anti-netherite:
   # ==============================
@@ -46,7 +41,7 @@ anti-netherite:
     # If true, the plugin will delete/remove items when appropriate
     # If false, the plugin will only cancel events without destroying items
     # This affects item drops, inventory clearing, and other destructive operations
-    enable-destructive-actions: true
+    enable-destructive-actions: false
   
   # ==============================
   # INVENTORY PROTECTION SETTINGS
@@ -89,7 +84,7 @@ anti-netherite:
     
     # Should we remove netherite items when dropped?
     # This removes netherite items when players drop them
-    remove-dropped: true
+    remove-dropped: false
   
   # ==============================
   # ANCIENT DEBRIS SETTINGS
@@ -103,7 +98,7 @@ anti-netherite:
     # Should we replace Ancient Debris with Netherrack when chunks are loaded?
     # This prevents Ancient Debris from generating in the world
     # THIS MAY CAUSE LAG ON FIRST LOAD
-    replace-on-chunk-load: true
+    replace-on-chunk-load: false
     
     # Should we only replace Ancient Debris in chunks that are already generated?
     # If true, only chunks that have been generated will be processed
@@ -113,13 +108,13 @@ anti-netherite:
     # Should we ensure chunks are loaded when trying to replace Ancient Debris?
     # If true, chunks will be loaded if they are not already loaded
     # If false, only already loaded chunks will be processed
-    ensure-chunks-loaded: true
+    ensure-chunks-loaded: false
     
     # Should we save the locations of replaced Ancient Debris?
     # If true, the plugin will track and save replaced Ancient Debris locations
     # If false, Ancient Debris will be replaced but not tracked or saved
     # Setting this to false will prevent restoration of Ancient Debris
-    save-replaced-locations: true
+    save-replaced-locations: false
   
   # ==============================
   # PERFORMANCE SETTINGS
@@ -155,7 +150,7 @@ anti-netherite:
     
     # Cooldown in seconds between command executions
     # This prevents command spam and potential performance issues
-    command-cooldown-seconds: 5
+    command-cooldown-seconds: 1
     
     # Should we log Ancient Debris replacements to the console?
     # If true, a message will be logged each time Ancient Debris is replaced
@@ -170,7 +165,7 @@ anti-netherite:
     # Should we ignore players in creative or spectator mode?
     # If true, players in creative or spectator mode will not be affected by the plugin
     # If false, all players will be affected regardless of game mode
-    ignore-creative-spectator: false
+    ignore-creative-spectator: true
     
     # Should we send notification messages to players?
     # If true, players will be notified when the plugin blocks their actions
@@ -190,6 +185,7 @@ anti-netherite:
     # List of items to consider as Netherite items
     # These are Bukkit Material enum names
     # You can add custom items here if needed
+    # The item names follow the format of the Bukkit Material enum
     items:
       - NETHERITE_SWORD
       - NETHERITE_PICKAXE
@@ -369,52 +365,6 @@ The Ancient Debris replacement system includes several safeguards:
 - Fully compatible with Folia 1.21.4 using region-aware schedulers
 - Supports hot reloads
 
-## Technical Details
+## Contributing
 
-The plugin uses different scheduling mechanisms depending on the server type:
-- On regular Bukkit/Spigot/Paper servers, it uses the standard BukkitScheduler
-- On Folia servers, it uses the region-aware schedulers to ensure thread safety
-
-The plugin provides comprehensive protection against Netherite items:
-- Periodic inventory scanning removes existing items
-- Event listeners prevent various ways of obtaining/using Netherite
-- Ancient Debris is replaced with Netherrack when mined or generated
-- All protection mechanisms can be individually configured
-- Centralized Netherite item detection for consistent behavior
-
-## Problems
-
-Open an issue on the GitHub repository if you have any problems or suggestions.
-
-## Building
-
-This plugin uses Gradle for building. It supports both Paper and Folia servers.
-
-### Requirements
-
-- Java 21 or higher (required for Paper 1.21.4)
-- Gradle 8.0 or higher
-
-### Building the plugin
-
-1. Clone the repository
-2. Run `./gradlew build` (Linux/macOS) or `gradlew.bat build` (Windows)
-3. The built JAR file will be in `build/libs/antinetherite-INDEV.jar`
-
-### Development
-
-The plugin is set up to support both Paper and Folia servers. It uses:
-
-- Paper API for standard server functionality
-- Folia API for compatibility with Folia servers
-- Region-aware schedulers for Folia compatibility
-
-When developing, keep these guidelines in mind:
-
-1. Always check if the server is Folia before using Bukkit schedulers
-2. Use the appropriate scheduler based on the server type
-3. For entity-related operations in Folia, use the entity's scheduler
-4. For location-based operations in Folia, use the region scheduler
-5. For global operations in Folia, use the global region scheduler
-
-The plugin automatically detects whether it's running on Paper or Folia and uses the appropriate APIs.
+For information on building the plugin and contributing to development, please see [CONTRIBUTING.md](CONTRIBUTING.md).
