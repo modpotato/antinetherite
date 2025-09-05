@@ -32,6 +32,7 @@ public class InventoryMoveListener implements Listener {
         this.config = config;
     }
     
+    @SuppressWarnings("removal")
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {

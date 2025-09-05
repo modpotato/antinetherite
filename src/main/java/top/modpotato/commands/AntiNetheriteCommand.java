@@ -250,8 +250,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     String action = args[2].toLowerCase();
                     String item = args[3].toUpperCase();
                     
-                    @SuppressWarnings("unchecked")
-                    List<String> items = (List<String>) plugin.getConfigValue("anti-netherite.detection.items");
+                    List<String> items = getDetectionItems();
                     
                     if (action.equals("add")) {
                         if (!items.contains(item)) {
@@ -485,7 +484,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         
         // Handle special case for detection.items
         if (setting.equals("detection.items")) {
-            List<String> items = (List<String>) plugin.getConfigValue("anti-netherite.detection.items");
+            List<String> items = getDetectionItems();
             sender.sendMessage(Component.text("Netherite items list:").color(NamedTextColor.GREEN));
             for (String item : items) {
                 sender.sendMessage(Component.text("- " + item).color(NamedTextColor.YELLOW));
@@ -620,5 +619,27 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
             }
         }
         return filtered;
+    }
+
+    /**
+     * Safely retrieves the detection.items list from the config, ensuring type safety.
+     * Filters out any non-string entries and logs warnings if the data type is unexpected.
+     * @return a mutable List<String> of detection items (never null)
+     */
+    private List<String> getDetectionItems() {
+        Object value = plugin.getConfigValue("anti-netherite.detection.items");
+        List<String> result = new ArrayList<>();
+        if (value instanceof List<?>) {
+            for (Object o : (List<?>) value) {
+                if (o instanceof String s) {
+                    result.add(s);
+                } else if (o != null) {
+                    plugin.getLogger().warning("Non-string entry in detection.items: " + o);
+                }
+            }
+        } else if (value != null) {
+            plugin.getLogger().warning("detection.items config value is not a list: " + value.getClass().getName());
+        }
+        return result;
     }
 } 
