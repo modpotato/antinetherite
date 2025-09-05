@@ -15,8 +15,8 @@ The plugin offers both destructive and non-destructive modes. In destructive mod
 - Prevents picking up Netherite items
 - Removes dropped Netherite items
 - Prevents moving Netherite items in inventories
-- Blocks automated container (hopper) transfers of Netherite items (configurable)
- - Blocks automated container (hopper) transfers of Netherite items (configurable)
+- Blocks automated container (hopper) transfers of Netherite items (configurable, disabled by default due to performance impact)
+- Blocks automated container (hopper) transfers of Netherite items (configurable, disabled by default due to performance impact)
 - Replaces Ancient Debris with Netherrack when mined or generated
 - **Performance-Optimized** - Control whether replaced Ancient Debris is restored on plugin disable
 - **Fine-Grained Control** - Advanced settings for memory usage, logging, and more
@@ -61,7 +61,9 @@ anti-netherite:
     # Should we cancel automated container transfers (hoppers, hopper minecarts, etc.)
     # of netherite items between inventories?
     # This blocks bypasses where players pipe netherite into containers
-    cancel-container-transfer: true
+    # WARNING: This can impact server performance with many hoppers/containers
+    # Only enable if you need this additional protection layer
+    cancel-container-transfer: false
   
   # ==============================
   # ITEM INTERACTION SETTINGS
@@ -240,7 +242,7 @@ Every setting in the configuration file can be adjusted through these commands. 
 **Inventory settings:**
 - `inventory.clear` - Enable/disable clearing Netherite from inventories (true/false)
 - `inventory.cancel-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
-- `inventory.cancel-container-transfer` - Enable/disable blocking automated hopper/container transfers of Netherite items (true/false)
+- `inventory.cancel-container-transfer` - Enable/disable blocking automated hopper/container transfers of Netherite items (true/false, disabled by default due to performance impact)
  - `inventory.cancel-container-transfer` - Enable/disable blocking automated hopper/container transfers of Netherite items (true/false)
 
 **Interaction settings:**
@@ -316,7 +318,7 @@ The plugin can prevent players from using Netherite items in several ways:
 2. **Inventory Protection**: The plugin can prevent players from having Netherite items in their inventory:
    - Clear items from player inventories periodically
    - Prevent moving Netherite items in inventories
-   - Block automated container (hopper) transfers of Netherite items
+   - Block automated container (hopper) transfers of Netherite items (disabled by default due to performance impact)
    - Prevent picking up Netherite items from the ground
    - Remove or prevent dropping Netherite items
 
@@ -356,6 +358,8 @@ The Ancient Debris replacement system includes several performance optimizations
 - **Selective Processing**: Only processes chunks in the Nether dimension where Ancient Debris naturally generates
 - **Chunk Generation Checking**: Can be configured to only process chunks that have already been generated
 - **Chunk Loading Control**: Can be configured to ensure chunks are loaded when replacing or restoring Ancient Debris
+
+**Container Transfer Protection**: The automated container transfer blocking feature (`inventory.cancel-container-transfer`) is disabled by default due to potential performance impact. This feature monitors all hopper and container item movements, which can add significant overhead on servers with many automated systems. Only enable this feature if you specifically need protection against players using hoppers to bypass inventory restrictions.
 
 ### Safeguards
 
