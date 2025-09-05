@@ -208,6 +208,7 @@ anti-netherite:
       - NETHERITE_BLOCK
       - NETHERITE_INGOT
       - NETHERITE_SCRAP
+      - ANCIENT_DEBRIS
   
   # ==============================
   # TIMING SETTINGS

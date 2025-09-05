@@ -30,7 +30,7 @@ anti-netherite:
     # WARNING: This can impact server performance with many hoppers/containers
     # Only enable if you need this additional protection layer
     cancel-container-transfer: false
-    
+
   # ==============================
   # ITEM INTERACTION SETTINGS
   # ==============================
@@ -174,6 +174,7 @@ anti-netherite:
       - NETHERITE_BLOCK
       - NETHERITE_INGOT
       - NETHERITE_SCRAP
+      - ANCIENT_DEBRIS
   
   # ==============================
   # TIMING SETTINGS
