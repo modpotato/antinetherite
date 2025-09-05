@@ -21,6 +21,7 @@ public class Config {
     private boolean cancelPickup;
     private boolean removeDropped;
     private boolean cancelInventoryMove;
+    private boolean cancelContainerTransfer;
     
     // Global settings
     private boolean enableDestructiveActions;
@@ -75,6 +76,7 @@ public class Config {
         // Load inventory protection settings
         clearNetherite = config.getBoolean("anti-netherite.inventory.clear", false);
         cancelInventoryMove = config.getBoolean("anti-netherite.inventory.cancel-move", true);
+    cancelContainerTransfer = config.getBoolean("anti-netherite.inventory.cancel-container-transfer", true);
         
         // Load item interaction settings
         cancelCraft = config.getBoolean("anti-netherite.interaction.cancel-craft", true);
@@ -201,6 +203,14 @@ public class Config {
     
     public boolean isCancelInventoryMove() {
         return cancelInventoryMove;
+    }
+
+    /**
+     * Gets whether to cancel automated container (hopper/minecart) transfers of Netherite items
+     * @return true if cancelling container transfers, false otherwise
+     */
+    public boolean isCancelContainerTransfer() {
+        return cancelContainerTransfer;
     }
     
     /**

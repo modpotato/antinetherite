@@ -38,6 +38,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         // Inventory settings
         SETTINGS_MAP.put("clear", "anti-netherite.inventory.clear");
         SETTINGS_MAP.put("cancel-inventory-move", "anti-netherite.inventory.cancel-move");
+        SETTINGS_MAP.put("cancel-container-transfer", "anti-netherite.inventory.cancel-container-transfer");
         
         // Interaction settings
         SETTINGS_MAP.put("cancel-craft", "anti-netherite.interaction.cancel-craft");
@@ -298,7 +299,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                configPath.contains("replace") || 
                configPath.contains("use-name-matching") ||
                configPath.contains("only-replace-generated-chunks") ||
-               configPath.contains("ensure-chunks-loaded");
+               configPath.contains("ensure-chunks-loaded") ||
+               configPath.contains("enable-destructive");
     }
 
     private void showHelp(CommandSender sender) {
@@ -315,7 +317,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("Available settings:").color(NamedTextColor.GOLD));
         
         sender.sendMessage(Component.text("Inventory settings:").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("  clear, cancel-inventory-move").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  clear, cancel-inventory-move, cancel-container-transfer").color(NamedTextColor.GRAY));
         
         sender.sendMessage(Component.text("Interaction settings:").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("  cancel-craft, cancel-equip, cancel-attack").color(NamedTextColor.GRAY));
@@ -360,6 +362,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 // Add inventory settings
                 completions.add("inventory.clear");
                 completions.add("inventory.cancel-move");
+                completions.add("inventory.cancel-container-transfer");
                 
                 // Add interaction settings
                 completions.add("interaction.cancel-craft");
@@ -425,7 +428,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     setting.contains("restore") || 
                     setting.contains("log") || 
                     setting.contains("use-name") ||
-                    setting.contains("enable-destructive")) {
+                    setting.contains("enable-destructive") ||
+                    setting.contains("clear")) {
                     completions.add("true");
                     completions.add("false");
                     return filterCompletions(completions, args[2]);
@@ -522,9 +526,9 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
             case "inventory.clear":
             case "clear":
                 return "anti-netherite.inventory.clear";
-            case "inventory.cancel-move":
-            case "cancel-inventory-move":
-                return "anti-netherite.inventory.cancel-move";
+            case "inventory.cancel-container-transfer":
+            case "cancel-container-transfer":
+                return "anti-netherite.inventory.cancel-container-transfer";
                 
             // Interaction settings
             case "interaction.cancel-craft":

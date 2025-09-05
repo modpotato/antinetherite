@@ -23,6 +23,11 @@ anti-netherite:
     # Should we cancel moving netherite items in inventories?
     # This prevents players from moving netherite items in their inventory
     cancel-move: true
+
+  # Should we cancel automated container transfers (hoppers, hopper minecarts, etc.)
+  # of netherite items between inventories?
+  # This blocks bypasses where players pipe netherite into containers
+  cancel-container-transfer: true
   
   # ==============================
   # ITEM INTERACTION SETTINGS
