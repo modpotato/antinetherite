@@ -43,6 +43,11 @@ public class CraftListener implements Listener {
             return;
         }
         
+        // Skip if crafting cancellation is disabled
+        if (!config.isCancelCraft()) {
+            return;
+        }
+        
         ItemStack result = event.getRecipe().getResult();
         if (netheriteDetector.isNetheriteItem(result)) {
             event.setCancelled(true);

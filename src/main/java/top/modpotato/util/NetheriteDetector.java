@@ -4,6 +4,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import top.modpotato.config.Config;
 
 import java.util.HashSet;
@@ -91,8 +92,9 @@ public class NetheriteDetector {
             // Check if the item has a display name that contains any of the custom names
             if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 Component displayName = item.getItemMeta().displayName();
+                String plainText = PlainTextComponentSerializer.plainText().serialize(displayName);
                 for (String netheriteItemName : netheriteItemNames) {
-                    if (displayName.toString().contains(netheriteItemName)) {
+                    if (plainText.toLowerCase().contains(netheriteItemName.toLowerCase())) {
                         return true;
                     }
                 }

@@ -43,6 +43,11 @@ public class PickupListener implements Listener {
             return;
         }
         
+        // Skip if pickup cancellation is disabled
+        if (!config.isCancelPickup()) {
+            return;
+        }
+        
         ItemStack item = event.getItem().getItemStack();
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             event.setCancelled(true);

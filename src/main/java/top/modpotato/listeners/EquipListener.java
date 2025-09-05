@@ -42,6 +42,11 @@ public class EquipListener implements Listener {
         if (shouldIgnore(player)) {
             return;
         }
+        
+        // Skip if equip cancellation is disabled
+        if (!config.isCancelEquip()) {
+            return;
+        }
 
         // Direct placement into armor slot (cursor -> slot) OR interacting with existing armor
         if (event.getSlotType() == SlotType.ARMOR) {
@@ -90,6 +95,11 @@ public class EquipListener implements Listener {
         if (shouldIgnore(player)) {
             return;
         }
+        
+        // Skip if equip cancellation is disabled
+        if (!config.isCancelEquip()) {
+            return;
+        }
 
         ItemStack dragged = event.getOldCursor();
         if (isNetheriteArmor(dragged)) {
@@ -111,6 +121,11 @@ public class EquipListener implements Listener {
         if (shouldIgnore(player)) {
             return;
         }
+        
+        // Skip if equip cancellation is disabled
+        if (!config.isCancelEquip()) {
+            return;
+        }
         ItemStack item = event.getItem();
         if (isNetheriteArmor(item)) {
             event.setCancelled(true);
@@ -130,6 +145,11 @@ public class EquipListener implements Listener {
             return;
         }
         if (shouldIgnore(player)) {
+            return;
+        }
+        
+        // Skip if equip cancellation is disabled
+        if (!config.isCancelEquip()) {
             return;
         }
         event.setCancelled(true);

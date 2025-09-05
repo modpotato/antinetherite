@@ -43,6 +43,11 @@ public class AttackListener implements Listener {
             return;
         }
         
+        // Skip if attack cancellation is disabled
+        if (!config.isCancelAttack()) {
+            return;
+        }
+        
         ItemStack item = player.getInventory().getItemInMainHand();
 
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
