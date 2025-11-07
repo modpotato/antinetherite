@@ -116,7 +116,7 @@ public class NetheriteRemover {
             schedulePlayerTask(player, delay);
         }
         
-        // Schedule a global task to handle new players and cleanup
+        // Schedule a global task to handle new players and cleanup (starts after 1 tick)
         foliaGlobalTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
             // Clean up tasks for offline players
             foliaPlayerTasks.entrySet().removeIf(entry -> {
