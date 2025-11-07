@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -248,7 +249,8 @@ public class DebrisStorage {
             World world = Bukkit.getWorld(worldUUID);
             
             if (world != null) {
-                List<String> toRemove = new ArrayList<>();
+                // Use thread-safe collection for Folia
+                ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
                 
                 if (isFolia) {
                     // On Folia, schedule each block change on the region scheduler
@@ -324,8 +326,10 @@ public class DebrisStorage {
                     }
                 }
                 
-                // Remove restored locations
-                entry.getValue().removeAll(toRemove);
+                // Thread-safe removal from the original list
+                synchronized (entry.getValue()) {
+                    entry.getValue().removeAll(toRemove);
+                }
             }
         }
         
@@ -351,7 +355,8 @@ public class DebrisStorage {
         boolean isFolia = checkFolia();
         
         if (replacedLocations.containsKey(worldUUID)) {
-            List<String> toRemove = new ArrayList<>();
+            // Use thread-safe collection for Folia
+            ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
             List<String> locations = new ArrayList<>(replacedLocations.get(worldUUID));
             
             if (isFolia) {
@@ -428,8 +433,11 @@ public class DebrisStorage {
                 }
             }
             
-            // Remove restored locations
-            replacedLocations.get(worldUUID).removeAll(toRemove);
+            // Thread-safe removal from the original list
+            List<String> worldLocations = replacedLocations.get(worldUUID);
+            synchronized (worldLocations) {
+                worldLocations.removeAll(toRemove);
+            }
             
             // Save changes asynchronously
             saveStorageAsync();
