@@ -21,6 +21,7 @@ public class RestorationProgressTracker {
     private final Map<UUID, Integer> lastPercentUpdate; // sessionId -> last percent milestone
     private final Set<UUID> globalOptOut; // Players who opted out of ALL feedback
     private Object taskId = null; // Can be Integer (Paper) or ScheduledTask (Folia)
+    private boolean isFolia; // Cache the Folia check result
     
     // Configuration
     private static final long TIME_UPDATE_INTERVAL_MS = 60000; // 60 seconds
@@ -38,6 +39,7 @@ public class RestorationProgressTracker {
         this.lastTimeUpdate = new ConcurrentHashMap<>();
         this.lastPercentUpdate = new ConcurrentHashMap<>();
         this.globalOptOut = ConcurrentHashMap.newKeySet();
+        this.isFolia = checkFolia();
     }
     
     /**
@@ -47,9 +49,6 @@ public class RestorationProgressTracker {
         if (taskId != null) {
             return; // Already running
         }
-        
-        // Check if running on Folia
-        boolean isFolia = checkFolia();
         
         if (isFolia) {
             // On Folia, use global region scheduler (runs every second = 20 ticks)
@@ -70,12 +69,11 @@ public class RestorationProgressTracker {
             return; // Not running
         }
         
-        boolean isFolia = checkFolia();
-        
         if (isFolia) {
             // On Folia, cancel the ScheduledTask
+            // The ScheduledTask interface has a cancel() method
             try {
-                // taskId is a ScheduledTask, call cancel() on it
+                // Use reflection only as fallback for API compatibility
                 taskId.getClass().getMethod("cancel").invoke(taskId);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to cancel Folia task: " + e.getMessage());

@@ -529,7 +529,7 @@ public class DebrisStorage {
                 for (String locString : entry.getValue()) {
                     try {
                         Location loc = deserializeLocation(world, locString);
-                        uniqueChunks.add(world.getUID() + ":" + (loc.getBlockX() >> 4) + "," + (loc.getBlockZ() >> 4));
+                        uniqueChunks.add(getChunkKey(loc, true));
                     } catch (Exception e) {
                         // Ignore invalid locations
                     }
@@ -571,7 +571,7 @@ public class DebrisStorage {
         for (String locString : locations) {
             try {
                 Location loc = deserializeLocation(world, locString);
-                uniqueChunks.add((loc.getBlockX() >> 4) + "," + (loc.getBlockZ() >> 4));
+                uniqueChunks.add(getChunkKey(loc, false));
             } catch (Exception e) {
                 // Ignore invalid locations
             }
@@ -910,5 +910,20 @@ public class DebrisStorage {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+    
+    /**
+     * Generates a chunk key for a location
+     * @param location The location
+     * @param includeWorld Whether to include the world UUID in the key
+     * @return The chunk key
+     */
+    private String getChunkKey(Location location, boolean includeWorld) {
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+        if (includeWorld && location.getWorld() != null) {
+            return location.getWorld().getUID() + ":" + chunkX + "," + chunkZ;
+        }
+        return chunkX + "," + chunkZ;
     }
 } 
