@@ -10,12 +10,15 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import top.modpotato.Main;
 import top.modpotato.config.Config;
+import top.modpotato.restoration.RestorationSession;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -23,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import org.bukkit.command.CommandSender;
 
 /**
  * Manages storage of replaced Ancient Debris locations
@@ -504,6 +508,303 @@ public class DebrisStorage {
         replacedLocations.clear();
         saveStorage();
         plugin.getLogger().info("Cleared all stored Ancient Debris locations");
+    }
+    
+    /**
+     * Schedules restoration of all Ancient Debris and returns a session for progress tracking
+     * @param initiator The command sender who initiated the restoration
+     * @return The restoration session, or null if nothing to restore
+     */
+    public RestorationSession scheduleRestoreAll(CommandSender initiator) {
+        // Calculate total locations and unique chunks
+        int totalLocations = getTotalLocationsCount();
+        if (totalLocations == 0) {
+            return null;
+        }
+        
+        Set<String> uniqueChunks = new HashSet<>();
+        for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
+            World world = Bukkit.getWorld(entry.getKey());
+            if (world != null) {
+                for (String locString : entry.getValue()) {
+                    try {
+                        Location loc = deserializeLocation(world, locString);
+                        uniqueChunks.add(world.getUID() + ":" + (loc.getBlockX() >> 4) + "," + (loc.getBlockZ() >> 4));
+                    } catch (Exception e) {
+                        // Ignore invalid locations
+                    }
+                }
+            }
+        }
+        
+        RestorationSession session = new RestorationSession(initiator, null, totalLocations, uniqueChunks.size());
+        
+        // Schedule the actual restoration work
+        scheduleRestorationWork(session, null);
+        
+        return session;
+    }
+    
+    /**
+     * Schedules restoration of Ancient Debris in a specific world and returns a session for progress tracking
+     * @param initiator The command sender who initiated the restoration
+     * @param world The world to restore debris in
+     * @return The restoration session, or null if nothing to restore
+     */
+    public RestorationSession scheduleRestoreInWorld(CommandSender initiator, World world) {
+        if (world == null) {
+            return null;
+        }
+        
+        UUID worldUUID = world.getUID();
+        if (!replacedLocations.containsKey(worldUUID)) {
+            return null;
+        }
+        
+        List<String> locations = replacedLocations.get(worldUUID);
+        if (locations.isEmpty()) {
+            return null;
+        }
+        
+        // Calculate unique chunks
+        Set<String> uniqueChunks = new HashSet<>();
+        for (String locString : locations) {
+            try {
+                Location loc = deserializeLocation(world, locString);
+                uniqueChunks.add((loc.getBlockX() >> 4) + "," + (loc.getBlockZ() >> 4));
+            } catch (Exception e) {
+                // Ignore invalid locations
+            }
+        }
+        
+        RestorationSession session = new RestorationSession(initiator, world, locations.size(), uniqueChunks.size());
+        
+        // Schedule the actual restoration work
+        scheduleRestorationWork(session, world);
+        
+        return session;
+    }
+    
+    /**
+     * Schedules the actual restoration work for a session
+     * @param session The restoration session
+     * @param worldFilter The world to restore in, or null for all worlds
+     */
+    private void scheduleRestorationWork(RestorationSession session, World worldFilter) {
+        boolean isFolia = checkFolia();
+        AtomicInteger restoredCount = new AtomicInteger(0);
+        
+        if (isFolia) {
+            scheduleFoliaRestoration(session, worldFilter, restoredCount);
+        } else {
+            schedulePaperRestoration(session, worldFilter, restoredCount);
+        }
+    }
+    
+    /**
+     * Schedules restoration work on Paper (main-thread batching)
+     * @param session The restoration session
+     * @param worldFilter The world to restore in, or null for all worlds
+     * @param restoredCount Counter for restored blocks
+     */
+    private void schedulePaperRestoration(RestorationSession session, World worldFilter, AtomicInteger restoredCount) {
+        // Collect all locations to process
+        List<LocationRestore> toRestore = new ArrayList<>();
+        
+        if (worldFilter == null) {
+            // Restore all worlds
+            for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
+                World world = Bukkit.getWorld(entry.getKey());
+                if (world != null) {
+                    for (String locString : entry.getValue()) {
+                        toRestore.add(new LocationRestore(world, locString, entry.getKey()));
+                    }
+                }
+            }
+        } else {
+            // Restore specific world
+            UUID worldUUID = worldFilter.getUID();
+            if (replacedLocations.containsKey(worldUUID)) {
+                for (String locString : replacedLocations.get(worldUUID)) {
+                    toRestore.add(new LocationRestore(worldFilter, locString, worldUUID));
+                }
+            }
+        }
+        
+        // Process in batches on the main thread to avoid lag
+        final int BATCH_SIZE = 50; // Process 50 blocks per tick
+        final int totalBatches = (int) Math.ceil((double) toRestore.size() / BATCH_SIZE);
+        
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            int currentBatch = 0;
+            
+            @Override
+            public void run() {
+                int start = currentBatch * BATCH_SIZE;
+                int end = Math.min(start + BATCH_SIZE, toRestore.size());
+                
+                for (int i = start; i < end; i++) {
+                    LocationRestore lr = toRestore.get(i);
+                    try {
+                        Location location = deserializeLocation(lr.world, lr.locString);
+                        
+                        // Skip if chunk not loaded
+                        if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                            session.incrementCompleted();
+                            continue;
+                        }
+                        
+                        Block block = location.getBlock();
+                        
+                        // Only restore if the block is still Netherrack
+                        if (block.getType() == Material.NETHERRACK) {
+                            block.setType(Material.ANCIENT_DEBRIS);
+                            restoredCount.incrementAndGet();
+                        }
+                        
+                        session.incrementCompleted();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error restoring Ancient Debris at " + lr.locString + ": " + e.getMessage());
+                        session.incrementCompleted();
+                    }
+                }
+                
+                currentBatch++;
+                
+                if (currentBatch < totalBatches) {
+                    // Schedule next batch
+                    Bukkit.getScheduler().runTask(plugin, this);
+                } else {
+                    // All done - clean up
+                    cleanupAfterRestore(worldFilter);
+                    
+                    // Notify progress tracker
+                    if (plugin.getRestorationProgressTracker() != null) {
+                        plugin.getRestorationProgressTracker().completeSession(session.getSessionId(), restoredCount.get());
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Schedules restoration work on Folia (region scheduler per location)
+     * @param session The restoration session
+     * @param worldFilter The world to restore in, or null for all worlds
+     * @param restoredCount Counter for restored blocks
+     */
+    private void scheduleFoliaRestoration(RestorationSession session, World worldFilter, AtomicInteger restoredCount) {
+        // Collect all locations to process
+        List<LocationRestore> toRestore = new ArrayList<>();
+        
+        if (worldFilter == null) {
+            // Restore all worlds
+            for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
+                World world = Bukkit.getWorld(entry.getKey());
+                if (world != null) {
+                    for (String locString : entry.getValue()) {
+                        toRestore.add(new LocationRestore(world, locString, entry.getKey()));
+                    }
+                }
+            }
+        } else {
+            // Restore specific world
+            UUID worldUUID = worldFilter.getUID();
+            if (replacedLocations.containsKey(worldUUID)) {
+                for (String locString : replacedLocations.get(worldUUID)) {
+                    toRestore.add(new LocationRestore(worldFilter, locString, worldUUID));
+                }
+            }
+        }
+        
+        // Count down latch to know when all are done
+        CountDownLatch latch = new CountDownLatch(toRestore.size());
+        
+        // Schedule each location on its region
+        for (LocationRestore lr : toRestore) {
+            try {
+                Location location = deserializeLocation(lr.world, lr.locString);
+                
+                // Skip if chunk not loaded
+                if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                    session.incrementCompleted();
+                    latch.countDown();
+                    continue;
+                }
+                
+                // Schedule on region
+                Bukkit.getRegionScheduler().execute(plugin, location, () -> {
+                    try {
+                        Block block = location.getBlock();
+                        
+                        // Only restore if the block is still Netherrack
+                        if (block.getType() == Material.NETHERRACK) {
+                            block.setType(Material.ANCIENT_DEBRIS);
+                            restoredCount.incrementAndGet();
+                        }
+                        
+                        session.incrementCompleted();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error restoring Ancient Debris: " + e.getMessage());
+                        session.incrementCompleted();
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            } catch (Exception e) {
+                plugin.getLogger().warning("Error scheduling restoration at " + lr.locString + ": " + e.getMessage());
+                session.incrementCompleted();
+                latch.countDown();
+            }
+        }
+        
+        // Wait for completion in a separate async task
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                latch.await(5, TimeUnit.MINUTES); // Wait up to 5 minutes
+            } catch (InterruptedException e) {
+                plugin.getLogger().warning("Interrupted while waiting for restoration: " + e.getMessage());
+                Thread.currentThread().interrupt();
+            }
+            
+            // Clean up on main thread (for Paper compatibility)
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                cleanupAfterRestore(worldFilter);
+                
+                // Notify progress tracker
+                if (plugin.getRestorationProgressTracker() != null) {
+                    plugin.getRestorationProgressTracker().completeSession(session.getSessionId(), restoredCount.get());
+                }
+            });
+        });
+    }
+    
+    /**
+     * Cleans up restored locations from storage
+     * @param worldFilter The world filter, or null for all worlds
+     */
+    private void cleanupAfterRestore(World worldFilter) {
+        if (worldFilter == null) {
+            replacedLocations.clear();
+        } else {
+            replacedLocations.remove(worldFilter.getUID());
+        }
+        saveStorageAsync();
+    }
+    
+    /**
+     * Helper class to hold location restoration data
+     */
+    private static class LocationRestore {
+        final World world;
+        final String locString;
+        final UUID worldUUID;
+        
+        LocationRestore(World world, String locString, UUID worldUUID) {
+            this.world = world;
+            this.locString = locString;
+            this.worldUUID = worldUUID;
+        }
     }
     
     /**

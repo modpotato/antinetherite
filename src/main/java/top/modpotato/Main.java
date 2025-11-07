@@ -13,6 +13,7 @@ import top.modpotato.listeners.PickupListener;
 import top.modpotato.listeners.ContainerTransferListener;
 import top.modpotato.commands.AntiNetheriteCommand;
 import top.modpotato.config.Config;
+import top.modpotato.restoration.RestorationProgressTracker;
 import top.modpotato.scheduler.NetheriteRemover;
 import top.modpotato.util.DebrisStorage;
 import top.modpotato.util.NetheriteDetector;
@@ -25,6 +26,7 @@ public class Main extends JavaPlugin {
     private NetheriteRemover netheriteRemover;
     private NetheriteDetector netheriteDetector;
     private DebrisStorage debrisStorage;
+    private RestorationProgressTracker restorationProgressTracker;
     
     private CraftListener craftListener;
     private EquipListener equipListener;
@@ -52,6 +54,10 @@ public class Main extends JavaPlugin {
             
             // Initialize debris storage
             debrisStorage = new DebrisStorage(this, config);
+            
+            // Initialize restoration progress tracker
+            restorationProgressTracker = new RestorationProgressTracker(this);
+            restorationProgressTracker.start();
             
             // Check if running on Folia
             isFolia = checkFolia();
@@ -84,6 +90,11 @@ public class Main extends JavaPlugin {
         isShuttingDown = true;
         
         try {
+            // Stop restoration progress tracker
+            if (restorationProgressTracker != null) {
+                restorationProgressTracker.stop();
+            }
+            
             // Stop tasks
             if (netheriteRemover != null) {
                 netheriteRemover.stop();
@@ -328,6 +339,14 @@ public class Main extends JavaPlugin {
      */
     public DebrisStorage getDebrisStorage() {
         return debrisStorage;
+    }
+    
+    /**
+     * Gets the restoration progress tracker
+     * @return The restoration progress tracker
+     */
+    public RestorationProgressTracker getRestorationProgressTracker() {
+        return restorationProgressTracker;
     }
     
     /**

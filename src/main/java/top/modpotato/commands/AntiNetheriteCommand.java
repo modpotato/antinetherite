@@ -6,11 +6,13 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import top.modpotato.Main;
+import top.modpotato.restoration.RestorationSession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +81,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadPluginConfig();
                 sender.sendMessage(Component.text("AntiNetherite configuration reloaded.").color(NamedTextColor.GREEN));
                 return true;
+            case "restore-feedback":
+                return handleRestoreFeedback(sender, args);
             case "restore-debris":
                 // Get the configured cooldown in milliseconds
                 int cooldownSeconds = plugin.getConfig().getInt("anti-netherite.advanced.command-cooldown-seconds", 5);
@@ -129,19 +133,26 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
                     
-                    sender.sendMessage(Component.text("Restoring " + worldLocations + " Ancient Debris in world " + worldName + "...").color(NamedTextColor.YELLOW));
+                    // Schedule restoration and get session
+                    RestorationSession session = plugin.getDebrisStorage().scheduleRestoreInWorld(sender, world);
                     
-                    // Run the restoration on the main thread (delegating Folia handling to DebrisStorage)
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        try {
-                            int count = plugin.getDebrisStorage().restoreDebrisInWorld(world);
-                            sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks in world " + worldName + ".").color(NamedTextColor.GREEN));
-                        } catch (Exception e) {
-                            sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
-                            plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
-                            e.printStackTrace();
-                        }
-                    });
+                    if (session == null) {
+                        sender.sendMessage(Component.text("No Ancient Debris locations to restore in world " + worldName + ".").color(NamedTextColor.YELLOW));
+                        return true;
+                    }
+                    
+                    // Register session with progress tracker
+                    plugin.getRestorationProgressTracker().registerSession(session);
+                    
+                    // Send immediate scheduling summary
+                    sender.sendMessage(Component.text("Scheduled restoration for ")
+                        .color(NamedTextColor.GREEN)
+                        .append(Component.text(session.getScheduledChunks()).color(NamedTextColor.GOLD))
+                        .append(Component.text(" chunks, ").color(NamedTextColor.GREEN))
+                        .append(Component.text(session.getTotalLocations()).color(NamedTextColor.GOLD))
+                        .append(Component.text(" locations in world ").color(NamedTextColor.GREEN))
+                        .append(Component.text(worldName).color(NamedTextColor.GOLD))
+                        .append(Component.text(".").color(NamedTextColor.GREEN)));
                 } else {
                     // Global restore
                     // Check if there are any locations to restore
@@ -151,19 +162,24 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
                     
-                    sender.sendMessage(Component.text("Restoring " + totalLocations + " replaced Ancient Debris...").color(NamedTextColor.YELLOW));
+                    // Schedule restoration and get session
+                    RestorationSession session = plugin.getDebrisStorage().scheduleRestoreAll(sender);
                     
-                    // Run the restoration on the main thread (delegating Folia handling to DebrisStorage)
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        try {
-                            int count = plugin.getDebrisStorage().restoreAllDebris();
-                            sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks.").color(NamedTextColor.GREEN));
-                        } catch (Exception e) {
-                            sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
-                            plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
-                            e.printStackTrace();
-                        }
-                    });
+                    if (session == null) {
+                        sender.sendMessage(Component.text("No Ancient Debris locations to restore.").color(NamedTextColor.YELLOW));
+                        return true;
+                    }
+                    
+                    // Register session with progress tracker
+                    plugin.getRestorationProgressTracker().registerSession(session);
+                    
+                    // Send immediate scheduling summary
+                    sender.sendMessage(Component.text("Scheduled restoration for ")
+                        .color(NamedTextColor.GREEN)
+                        .append(Component.text(session.getScheduledChunks()).color(NamedTextColor.GOLD))
+                        .append(Component.text(" chunks, ").color(NamedTextColor.GREEN))
+                        .append(Component.text(session.getTotalLocations()).color(NamedTextColor.GOLD))
+                        .append(Component.text(" locations.").color(NamedTextColor.GREEN)));
                 }
                 return true;
             case "debris-info":
@@ -303,6 +319,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("/antinetherite restore-debris [world] - Restore all replaced Ancient Debris").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("  - Optional world parameter to restore only in a specific world").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("  - Only restores blocks that are still Netherrack").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  - Shows progress updates with blended time and percentage-based reporting").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/antinetherite restore-feedback <on|off> - Toggle restoration progress feedback").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("/antinetherite debris-info - Show information about stored Ancient Debris locations").color(NamedTextColor.YELLOW));
         sender.sendMessage(Component.text("  - Displays counts per world and current config status").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("/antinetherite get <setting> - Get a configuration value").color(NamedTextColor.YELLOW));
@@ -342,6 +360,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             completions.add("reload");
             completions.add("restore-debris");
+            completions.add("restore-feedback");
             completions.add("debris-info");
             completions.add("get");
             completions.add("set");
@@ -349,6 +368,12 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         }
         
         if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("restore-feedback")) {
+                completions.add("on");
+                completions.add("off");
+                return filterCompletions(completions, args[1]);
+            }
+            
             if (args[0].equalsIgnoreCase("get") || args[0].equalsIgnoreCase("set")) {
                 // Add global settings
                 completions.add("global.enable-destructive-actions");
@@ -461,6 +486,41 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         }
         
         return completions;
+    }
+
+    /**
+     * Handles the /antinetherite restore-feedback command
+     * @param sender The command sender
+     * @param args The command arguments
+     * @return true if the command was handled, false otherwise
+     */
+    private boolean handleRestoreFeedback(CommandSender sender, String[] args) {
+        // Only players can opt in/out of feedback
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Only players can use this command.").color(NamedTextColor.RED));
+            return true;
+        }
+        
+        Player player = (Player) sender;
+        
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /antinetherite restore-feedback <on|off>").color(NamedTextColor.RED));
+            return true;
+        }
+        
+        String action = args[1].toLowerCase();
+        
+        if (action.equals("on")) {
+            plugin.getRestorationProgressTracker().setGlobalOptOut(player.getUniqueId(), false);
+            sender.sendMessage(Component.text("Restoration progress feedback enabled.").color(NamedTextColor.GREEN));
+        } else if (action.equals("off")) {
+            plugin.getRestorationProgressTracker().setGlobalOptOut(player.getUniqueId(), true);
+            sender.sendMessage(Component.text("Restoration progress feedback disabled.").color(NamedTextColor.YELLOW));
+        } else {
+            sender.sendMessage(Component.text("Usage: /antinetherite restore-feedback <on|off>").color(NamedTextColor.RED));
+        }
+        
+        return true;
     }
 
     /**
