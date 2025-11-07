@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
@@ -291,9 +292,12 @@ public class DebrisStorage {
                         }
                     }
                     
-                    // Wait for all tasks to complete
+                    // Wait for all tasks to complete (with timeout to prevent indefinite blocking)
                     try {
-                        latch.await();
+                        if (!latch.await(60, TimeUnit.SECONDS)) {
+                            plugin.getLogger().warning("Timeout waiting for debris restoration in world " + world.getName() + 
+                                                      ". Some blocks may not have been restored.");
+                        }
                     } catch (InterruptedException e) {
                         plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
                         Thread.currentThread().interrupt();
@@ -405,9 +409,12 @@ public class DebrisStorage {
                     }
                 }
                 
-                // Wait for all tasks to complete
+                // Wait for all tasks to complete (with timeout to prevent indefinite blocking)
                 try {
-                    latch.await();
+                    if (!latch.await(60, TimeUnit.SECONDS)) {
+                        plugin.getLogger().warning("Timeout waiting for debris restoration in world " + world.getName() + 
+                                                  ". Some blocks may not have been restored.");
+                    }
                 } catch (InterruptedException e) {
                     plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
                     Thread.currentThread().interrupt();
