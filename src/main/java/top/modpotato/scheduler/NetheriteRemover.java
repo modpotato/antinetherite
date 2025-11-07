@@ -10,8 +10,9 @@ import top.modpotato.Main;
 import top.modpotato.config.Config;
 import top.modpotato.util.NetheriteDetector;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -31,7 +32,8 @@ public class NetheriteRemover {
     
     // Task references for both Bukkit and Folia
     private BukkitTask bukkitTask;
-    private List<ScheduledTask> foliaTasks;
+    private Map<UUID, ScheduledTask> foliaPlayerTasks;
+    private ScheduledTask foliaGlobalTask;
     
     /**
      * Creates a new NetheriteRemover
@@ -46,7 +48,7 @@ public class NetheriteRemover {
         this.netheriteDetector = netheriteDetector;
         this.logger = plugin.getLogger();
         this.config = config;
-        this.foliaTasks = new ArrayList<>();
+        this.foliaPlayerTasks = new HashMap<>();
     }
     
     /**
@@ -107,30 +109,32 @@ public class NetheriteRemover {
      * @param delay The delay between checks in ticks
      */
     private void startFoliaTask(int delay) {
-        foliaTasks = new ArrayList<>();
+        foliaPlayerTasks = new HashMap<>();
         
-        // for Folia, we need to schedule a task for each player
+        // Schedule a task for each online player
         for (Player player : Bukkit.getOnlinePlayers()) {
             schedulePlayerTask(player, delay);
         }
         
-        // schedule a global task to handle new players
-        ScheduledTask globalTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                // check if this player already has a task
-                for (ScheduledTask playerTask : foliaTasks) {
-                    // assume playerTask is cancelled if the player is offline
-                    if (playerTask.isCancelled()) {
-                        foliaTasks.remove(playerTask);
-                    }
+        // Schedule a global task to handle new players and cleanup
+        foliaGlobalTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
+            // Clean up tasks for offline players
+            foliaPlayerTasks.entrySet().removeIf(entry -> {
+                Player player = Bukkit.getPlayer(entry.getKey());
+                if (player == null || !player.isOnline()) {
+                    entry.getValue().cancel();
+                    return true;
                 }
-                
-                // schedule a new task for this player
-                schedulePlayerTask(player, delay);
+                return false;
+            });
+            
+            // Schedule tasks for new players
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!foliaPlayerTasks.containsKey(player.getUniqueId())) {
+                    schedulePlayerTask(player, delay);
+                }
             }
-        }, 1, delay);
-        
-        foliaTasks.add(globalTask);
+        }, delay, delay);
     }
     
     /**
@@ -139,6 +143,14 @@ public class NetheriteRemover {
      * @param delay The delay between checks in ticks
      */
     private void schedulePlayerTask(Player player, int delay) {
+        UUID playerId = player.getUniqueId();
+        
+        // Cancel existing task if present
+        ScheduledTask existingTask = foliaPlayerTasks.get(playerId);
+        if (existingTask != null && !existingTask.isCancelled()) {
+            existingTask.cancel();
+        }
+        
         ScheduledTask task = player.getScheduler().runAtFixedRate(plugin, (scheduledTask) -> {
             AtomicInteger removedCount = new AtomicInteger(0);
             checkPlayerInventory(player, removedCount);
@@ -147,24 +159,33 @@ public class NetheriteRemover {
                 logger.info("Removed " + removedCount.get() + " Netherite items from " + player.getName() + "'s inventory");
             }
             
-            // if the player is offline, cancel this task
+            // If the player is offline, cancel this task and remove from map
             if (!player.isOnline()) {
                 scheduledTask.cancel();
-                foliaTasks.remove(scheduledTask);
+                foliaPlayerTasks.remove(playerId);
             }
         }, null, 1, delay);
         
-        foliaTasks.add(task);
+        foliaPlayerTasks.put(playerId, task);
     }
     
     /**
      * Stops all Folia tasks
      */
     private void stopFoliaTasks() {
-        for (ScheduledTask task : foliaTasks) {
-            task.cancel();
+        // Cancel all player tasks
+        for (ScheduledTask task : foliaPlayerTasks.values()) {
+            if (task != null && !task.isCancelled()) {
+                task.cancel();
+            }
         }
-        foliaTasks.clear();
+        foliaPlayerTasks.clear();
+        
+        // Cancel global task
+        if (foliaGlobalTask != null && !foliaGlobalTask.isCancelled()) {
+            foliaGlobalTask.cancel();
+            foliaGlobalTask = null;
+        }
     }
     
     /**

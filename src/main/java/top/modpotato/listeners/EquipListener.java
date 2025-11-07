@@ -39,6 +39,12 @@ public class EquipListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         if (shouldIgnore(player)) {
             return;
         }
@@ -92,6 +98,12 @@ public class EquipListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         if (shouldIgnore(player)) {
             return;
         }
@@ -118,6 +130,12 @@ public class EquipListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         if (shouldIgnore(player)) {
             return;
         }
@@ -144,6 +162,12 @@ public class EquipListener implements Listener {
         if (!(event.getTargetEntity() instanceof Player player)) {
             return;
         }
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         if (shouldIgnore(player)) {
             return;
         }

@@ -26,9 +26,8 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
     // Map of user-friendly setting names to actual config paths
     private final Map<String, String> SETTINGS_MAP = new HashMap<>();
     
-    // Track when the last restore command was used to prevent spam
-    private long lastRestoreTime = 0;
-    private static final long RESTORE_COOLDOWN = 10000; // 10 seconds cooldown
+    // Track when the last restore command was used per sender to prevent spam
+    private final Map<String, Long> lastRestoreTimes = new HashMap<>();
 
     public AntiNetheriteCommand(Main plugin) {
         this.plugin = plugin;
@@ -50,7 +49,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         SETTINGS_MAP.put("remove-dropped", "anti-netherite.item-handling.remove-dropped");
         
         // Ancient debris settings
-        SETTINGS_MAP.put("replace-ancient-debris", "anti-netherite.ancient-debris.replace-when-mined");
+        SETTINGS_MAP.put("replace-when-mined", "anti-netherite.ancient-debris.replace-when-mined");
         SETTINGS_MAP.put("replace-on-chunk-load", "anti-netherite.ancient-debris.replace-on-chunk-load");
         SETTINGS_MAP.put("only-replace-generated-chunks", "anti-netherite.ancient-debris.only-replace-generated-chunks");
         SETTINGS_MAP.put("ensure-chunks-loaded", "anti-netherite.ancient-debris.ensure-chunks-loaded");
@@ -81,14 +80,22 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("AntiNetherite configuration reloaded.").color(NamedTextColor.GREEN));
                 return true;
             case "restore-debris":
-                // Check for cooldown to prevent command spam
+                // Get the configured cooldown in milliseconds
+                int cooldownSeconds = plugin.getConfig().getInt("anti-netherite.advanced.command-cooldown-seconds", 5);
+                long cooldownMs = cooldownSeconds * 1000L;
+                
+                // Check for cooldown per sender to prevent command spam
+                String senderKey = sender.getName();
                 long currentTime = System.currentTimeMillis();
-                if (currentTime - lastRestoreTime < RESTORE_COOLDOWN) {
-                    sender.sendMessage(Component.text("Please wait before using this command again.").color(NamedTextColor.RED));
+                Long lastTime = lastRestoreTimes.get(senderKey);
+                
+                if (lastTime != null && (currentTime - lastTime) < cooldownMs) {
+                    long remainingSeconds = (cooldownMs - (currentTime - lastTime)) / 1000;
+                    sender.sendMessage(Component.text("Please wait " + remainingSeconds + " seconds before using this command again.").color(NamedTextColor.RED));
                     return true;
                 }
                 
-                lastRestoreTime = currentTime;
+                lastRestoreTimes.put(senderKey, currentTime);
                 
                 // Check if replacement features are enabled in config
                 boolean replaceWhenMined = (boolean) plugin.getConfigValue("anti-netherite.ancient-debris.replace-when-mined");
@@ -124,20 +131,13 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     
                     sender.sendMessage(Component.text("Restoring " + worldLocations + " Ancient Debris in world " + worldName + "...").color(NamedTextColor.YELLOW));
                     
-                    // Run the restoration asynchronously to prevent lag
-                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    // Run the restoration on the main thread (delegating Folia handling to DebrisStorage)
+                    Bukkit.getScheduler().runTask(plugin, () -> {
                         try {
                             int count = plugin.getDebrisStorage().restoreDebrisInWorld(world);
-                            
-                            // Send message on the main thread
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks in world " + worldName + ".").color(NamedTextColor.GREEN));
-                            });
+                            sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks in world " + worldName + ".").color(NamedTextColor.GREEN));
                         } catch (Exception e) {
-                            // Send error message on the main thread
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
-                            });
+                            sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
                             plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
                             e.printStackTrace();
                         }
@@ -153,20 +153,13 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     
                     sender.sendMessage(Component.text("Restoring " + totalLocations + " replaced Ancient Debris...").color(NamedTextColor.YELLOW));
                     
-                    // Run the restoration asynchronously to prevent lag
-                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    // Run the restoration on the main thread (delegating Folia handling to DebrisStorage)
+                    Bukkit.getScheduler().runTask(plugin, () -> {
                         try {
                             int count = plugin.getDebrisStorage().restoreAllDebris();
-                            
-                            // Send message on the main thread
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks.").color(NamedTextColor.GREEN));
-                            });
+                            sender.sendMessage(Component.text("Restored " + count + " Ancient Debris blocks.").color(NamedTextColor.GREEN));
                         } catch (Exception e) {
-                            // Send error message on the main thread
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
-                            });
+                            sender.sendMessage(Component.text("Error restoring Ancient Debris: " + e.getMessage()).color(NamedTextColor.RED));
                             plugin.getLogger().severe("Error restoring Ancient Debris: " + e.getMessage());
                             e.printStackTrace();
                         }
@@ -212,36 +205,10 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 
-                // Get the actual config path from the user-friendly name
-                String settingPath = SETTINGS_MAP.get(args[1]);
-                if (settingPath == null && !args[1].equals("detection.items")) {
-                    sender.sendMessage(Component.text("Unknown setting: " + args[1]).color(NamedTextColor.RED));
-                    return true;
-                }
+                String settingName = args[1].toLowerCase();
                 
-                String settingValue = args[2];
-                
-                // Handle different setting types
-                if (args[1].equals("delay") || args[1].equals("multiplier")) {
-                    try {
-                        int intValue = Integer.parseInt(settingValue);
-                        if (intValue < 1) {
-                            sender.sendMessage(Component.text("Value must be at least 1.").color(NamedTextColor.RED));
-                            return true;
-                        }
-                        plugin.updateConfig(settingPath, intValue);
-                    } catch (NumberFormatException e) {
-                        sender.sendMessage(Component.text("Invalid number: " + settingValue).color(NamedTextColor.RED));
-                        return true;
-                    }
-                } else if (isBooleanSetting(args[1])) {
-                    if (!settingValue.equalsIgnoreCase("true") && !settingValue.equalsIgnoreCase("false")) {
-                        sender.sendMessage(Component.text("Value must be true or false.").color(NamedTextColor.RED));
-                        return true;
-                    }
-                    plugin.updateConfig(settingPath, Boolean.parseBoolean(settingValue));
-                } else if (args[1].equals("detection.items")) {
-                    // Special handling for adding/removing items
+                // Special handling for detection.items add/remove
+                if (settingName.equals("detection.items")) {
                     if (args.length < 4) {
                         sender.sendMessage(Component.text("Usage: /antinetherite set detection.items <add|remove> <item>").color(NamedTextColor.RED));
                         return true;
@@ -272,34 +239,62 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage(Component.text("Invalid action: " + action + ". Use 'add' or 'remove'.").color(NamedTextColor.RED));
                     }
                     return true;
-                } else {
-                    sender.sendMessage(Component.text("Unknown setting: " + args[1]).color(NamedTextColor.RED));
+                }
+                
+                // Get the actual config path from the user-friendly name
+                String settingPath = getConfigPath(settingName);
+                if (settingPath == null) {
+                    sender.sendMessage(Component.text("Unknown setting: " + settingName).color(NamedTextColor.RED));
                     return true;
                 }
                 
-                sender.sendMessage(Component.text("Set " + args[1] + " to " + settingValue).color(NamedTextColor.GREEN));
+                String settingValue = args[2];
+                
+                // Get the current value to determine the type
+                Object currentValue = plugin.getConfigValue(settingPath);
+                
+                if (currentValue == null) {
+                    sender.sendMessage(Component.text("Setting not found: " + settingName).color(NamedTextColor.RED));
+                    return true;
+                }
+                
+                // Type-aware setting
+                try {
+                    if (currentValue instanceof Boolean) {
+                        // Boolean setting
+                        if (!settingValue.equalsIgnoreCase("true") && !settingValue.equalsIgnoreCase("false")) {
+                            sender.sendMessage(Component.text("Value must be true or false.").color(NamedTextColor.RED));
+                            return true;
+                        }
+                        plugin.updateConfig(settingPath, Boolean.parseBoolean(settingValue));
+                    } else if (currentValue instanceof Integer) {
+                        // Integer setting
+                        int intValue = Integer.parseInt(settingValue);
+                        if (intValue < 1) {
+                            sender.sendMessage(Component.text("Value must be at least 1.").color(NamedTextColor.RED));
+                            return true;
+                        }
+                        plugin.updateConfig(settingPath, intValue);
+                    } else if (currentValue instanceof List) {
+                        // List setting (should not happen here - detection.items is handled above)
+                        sender.sendMessage(Component.text("This setting is a list and cannot be set directly.").color(NamedTextColor.RED));
+                        return true;
+                    } else {
+                        // Unknown type, try string
+                        plugin.updateConfig(settingPath, settingValue);
+                    }
+                    
+                    sender.sendMessage(Component.text("Set " + settingName + " to " + settingValue).color(NamedTextColor.GREEN));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(Component.text("Invalid number: " + settingValue).color(NamedTextColor.RED));
+                    return true;
+                }
+                
                 return true;
             default:
                 showHelp(sender);
                 return true;
         }
-    }
-
-    private boolean isBooleanSetting(String setting) {
-        String configPath = SETTINGS_MAP.get(setting);
-        if (configPath == null) {
-            return false;
-        }
-        
-        // Check if the setting is a boolean type
-        return configPath.contains("clear") || 
-               configPath.contains("cancel") || 
-               configPath.contains("remove") || 
-               configPath.contains("replace") || 
-               configPath.contains("use-name-matching") ||
-               configPath.contains("only-replace-generated-chunks") ||
-               configPath.contains("ensure-chunks-loaded") ||
-               configPath.contains("enable-destructive");
     }
 
     private void showHelp(CommandSender sender) {
@@ -325,7 +320,7 @@ public class AntiNetheriteCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("  cancel-pickup, remove-dropped").color(NamedTextColor.GRAY));
         
         sender.sendMessage(Component.text("Ancient debris settings:").color(NamedTextColor.YELLOW));
-        sender.sendMessage(Component.text("  replace-ancient-debris, replace-on-chunk-load").color(NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  replace-when-mined, replace-on-chunk-load").color(NamedTextColor.GRAY));
         sender.sendMessage(Component.text("  only-replace-generated-chunks, ensure-chunks-loaded").color(NamedTextColor.GRAY));
         
         sender.sendMessage(Component.text("Detection settings:").color(NamedTextColor.YELLOW));

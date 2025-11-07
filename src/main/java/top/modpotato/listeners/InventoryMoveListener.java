@@ -41,6 +41,11 @@ public class InventoryMoveListener implements Listener {
         
         Player player = (Player) event.getWhoClicked();
         
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         // Skip players in creative or spectator mode if configured to do so
         if (config.isIgnoreCreativeSpectator() && 
             (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR)) {
@@ -126,6 +131,11 @@ public class InventoryMoveListener implements Listener {
         }
         
         Player player = (Player) event.getWhoClicked();
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
         
         // Skip players in creative or spectator mode if configured to do so
         if (config.isIgnoreCreativeSpectator() && 
