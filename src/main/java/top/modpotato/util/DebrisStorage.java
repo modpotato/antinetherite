@@ -249,10 +249,10 @@ public class DebrisStorage {
             World world = Bukkit.getWorld(worldUUID);
             
             if (world != null) {
-                // Use thread-safe collection for Folia
-                ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
-                
                 if (isFolia) {
+                    // On Folia, use thread-safe collection
+                    ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
+                    
                     // On Folia, schedule each block change on the region scheduler
                     CountDownLatch latch = new CountDownLatch(entry.getValue().size());
                     
@@ -298,8 +298,15 @@ public class DebrisStorage {
                         plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
                         Thread.currentThread().interrupt();
                     }
+                    
+                    // Thread-safe removal from the original list
+                    synchronized (entry.getValue()) {
+                        entry.getValue().removeAll(toRemove);
+                    }
                 } else {
-                    // On Paper/Spigot, schedule all block changes on the main thread
+                    // On Paper/Spigot, use simple ArrayList (single-threaded)
+                    List<String> toRemove = new ArrayList<>();
+                    
                     for (String locString : entry.getValue()) {
                         try {
                             Location location = deserializeLocation(world, locString);
@@ -307,6 +314,7 @@ public class DebrisStorage {
                             // Check if the chunk is loaded or should be loaded
                             if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
                                 plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                                toRemove.add(locString); // Add to toRemove for consistency
                                 continue;
                             }
                             
@@ -324,10 +332,8 @@ public class DebrisStorage {
                             toRemove.add(locString); // Remove invalid locations
                         }
                     }
-                }
-                
-                // Thread-safe removal from the original list
-                synchronized (entry.getValue()) {
+                    
+                    // Remove restored locations (no sync needed - single thread)
                     entry.getValue().removeAll(toRemove);
                 }
             }
@@ -355,11 +361,12 @@ public class DebrisStorage {
         boolean isFolia = checkFolia();
         
         if (replacedLocations.containsKey(worldUUID)) {
-            // Use thread-safe collection for Folia
-            ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
             List<String> locations = new ArrayList<>(replacedLocations.get(worldUUID));
             
             if (isFolia) {
+                // On Folia, use thread-safe collection
+                ConcurrentLinkedQueue<String> toRemove = new ConcurrentLinkedQueue<>();
+                
                 // On Folia, schedule each block change on the region scheduler
                 CountDownLatch latch = new CountDownLatch(locations.size());
                 
@@ -405,8 +412,16 @@ public class DebrisStorage {
                     plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
                     Thread.currentThread().interrupt();
                 }
+                
+                // Thread-safe removal from the original list
+                List<String> worldLocations = replacedLocations.get(worldUUID);
+                synchronized (worldLocations) {
+                    worldLocations.removeAll(toRemove);
+                }
             } else {
-                // On Paper/Spigot, execute block changes on the main thread
+                // On Paper/Spigot, use simple ArrayList (single-threaded)
+                List<String> toRemove = new ArrayList<>();
+                
                 for (String locString : locations) {
                     try {
                         Location location = deserializeLocation(world, locString);
@@ -414,6 +429,7 @@ public class DebrisStorage {
                         // Check if the chunk is loaded or should be loaded
                         if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
                             plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                            toRemove.add(locString); // Add to toRemove for consistency
                             continue;
                         }
                         
@@ -431,12 +447,9 @@ public class DebrisStorage {
                         toRemove.add(locString); // Remove invalid locations
                     }
                 }
-            }
-            
-            // Thread-safe removal from the original list
-            List<String> worldLocations = replacedLocations.get(worldUUID);
-            synchronized (worldLocations) {
-                worldLocations.removeAll(toRemove);
+                
+                // Remove restored locations (no sync needed - single thread)
+                replacedLocations.get(worldUUID).removeAll(toRemove);
             }
             
             // Save changes asynchronously
