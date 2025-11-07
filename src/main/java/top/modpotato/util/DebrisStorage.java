@@ -270,7 +270,7 @@ public class DebrisStorage {
                             }
                             
                             // Schedule block change on the region scheduler
-                            world.getRegionScheduler().execute(plugin, location, () -> {
+                            Bukkit.getRegionScheduler().execute(plugin, location, () -> {
                                 try {
                                     Block block = location.getBlock();
                                     
@@ -387,7 +387,7 @@ public class DebrisStorage {
                         }
                         
                         // Schedule block change on the region scheduler
-                        world.getRegionScheduler().execute(plugin, location, () -> {
+                        Bukkit.getRegionScheduler().execute(plugin, location, () -> {
                             try {
                                 Block block = location.getBlock();
                                 
