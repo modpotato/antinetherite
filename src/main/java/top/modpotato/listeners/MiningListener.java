@@ -69,8 +69,14 @@ public class MiningListener implements Listener {
             return;
         }
         
-        // Skip if player is in creative or spectator mode and we're ignoring those modes
         Player player = event.getPlayer();
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
+        // Skip if player is in creative or spectator mode and we're ignoring those modes
         if (config.isIgnoreCreativeSpectator() && 
             (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR)) {
             return;

@@ -38,6 +38,13 @@ public class DropListener implements Listener {
             return;
         }
         
+        Player player = event.getPlayer();
+        
+        // Skip players with bypass permission
+        if (player.hasPermission("antinetherite.bypass")) {
+            return;
+        }
+        
         ItemStack item = event.getItemDrop().getItemStack();
         if (item != null && netheriteDetector.isNetheriteItem(item)) {
             if (config.isEnableDestructiveActions()) {

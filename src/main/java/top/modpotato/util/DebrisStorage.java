@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 /**
@@ -238,7 +240,8 @@ public class DebrisStorage {
      * @return The number of blocks restored
      */
     public int restoreAllDebris() {
-        int restoredCount = 0;
+        AtomicInteger restoredCount = new AtomicInteger(0);
+        boolean isFolia = checkFolia();
         
         for (Map.Entry<UUID, List<String>> entry : replacedLocations.entrySet()) {
             UUID worldUUID = entry.getKey();
@@ -247,7 +250,159 @@ public class DebrisStorage {
             if (world != null) {
                 List<String> toRemove = new ArrayList<>();
                 
-                for (String locString : entry.getValue()) {
+                if (isFolia) {
+                    // On Folia, schedule each block change on the region scheduler
+                    CountDownLatch latch = new CountDownLatch(entry.getValue().size());
+                    
+                    for (String locString : entry.getValue()) {
+                        try {
+                            Location location = deserializeLocation(world, locString);
+                            
+                            // Check if the chunk is loaded or should be loaded
+                            if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                                plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                                toRemove.add(locString);
+                                latch.countDown();
+                                continue;
+                            }
+                            
+                            // Schedule block change on the region scheduler
+                            world.getRegionScheduler().execute(plugin, location, () -> {
+                                try {
+                                    Block block = location.getBlock();
+                                    
+                                    // Only restore if the block is still Netherrack
+                                    if (block.getType() == Material.NETHERRACK) {
+                                        block.setType(Material.ANCIENT_DEBRIS);
+                                        restoredCount.incrementAndGet();
+                                    }
+                                    
+                                    toRemove.add(locString);
+                                } finally {
+                                    latch.countDown();
+                                }
+                            });
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
+                            toRemove.add(locString); // Remove invalid locations
+                            latch.countDown();
+                        }
+                    }
+                    
+                    // Wait for all tasks to complete
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    // On Paper/Spigot, schedule all block changes on the main thread
+                    for (String locString : entry.getValue()) {
+                        try {
+                            Location location = deserializeLocation(world, locString);
+                            
+                            // Check if the chunk is loaded or should be loaded
+                            if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                                plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                                continue;
+                            }
+                            
+                            Block block = location.getBlock();
+                            
+                            // Only restore if the block is still Netherrack
+                            if (block.getType() == Material.NETHERRACK) {
+                                block.setType(Material.ANCIENT_DEBRIS);
+                                restoredCount.incrementAndGet();
+                            }
+                            
+                            toRemove.add(locString);
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
+                            toRemove.add(locString); // Remove invalid locations
+                        }
+                    }
+                }
+                
+                // Remove restored locations
+                entry.getValue().removeAll(toRemove);
+            }
+        }
+        
+        // Save changes asynchronously
+        saveStorageAsync();
+        
+        plugin.getLogger().info("Restored " + restoredCount.get() + " Ancient Debris blocks");
+        return restoredCount.get();
+    }
+    
+    /**
+     * Restores Ancient Debris in a specific world
+     * @param world The world to restore Ancient Debris in
+     * @return The number of blocks restored
+     */
+    public int restoreDebrisInWorld(World world) {
+        if (world == null) {
+            return 0;
+        }
+        
+        AtomicInteger restoredCount = new AtomicInteger(0);
+        UUID worldUUID = world.getUID();
+        boolean isFolia = checkFolia();
+        
+        if (replacedLocations.containsKey(worldUUID)) {
+            List<String> toRemove = new ArrayList<>();
+            List<String> locations = new ArrayList<>(replacedLocations.get(worldUUID));
+            
+            if (isFolia) {
+                // On Folia, schedule each block change on the region scheduler
+                CountDownLatch latch = new CountDownLatch(locations.size());
+                
+                for (String locString : locations) {
+                    try {
+                        Location location = deserializeLocation(world, locString);
+                        
+                        // Check if the chunk is loaded or should be loaded
+                        if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
+                            plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
+                            toRemove.add(locString);
+                            latch.countDown();
+                            continue;
+                        }
+                        
+                        // Schedule block change on the region scheduler
+                        world.getRegionScheduler().execute(plugin, location, () -> {
+                            try {
+                                Block block = location.getBlock();
+                                
+                                // Only restore if the block is still Netherrack
+                                if (block.getType() == Material.NETHERRACK) {
+                                    block.setType(Material.ANCIENT_DEBRIS);
+                                    restoredCount.incrementAndGet();
+                                }
+                                
+                                toRemove.add(locString);
+                            } finally {
+                                latch.countDown();
+                            }
+                        });
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
+                        toRemove.add(locString); // Remove invalid locations
+                        latch.countDown();
+                    }
+                }
+                
+                // Wait for all tasks to complete
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    plugin.getLogger().warning("Interrupted while waiting for debris restoration: " + e.getMessage());
+                    Thread.currentThread().interrupt();
+                }
+            } else {
+                // On Paper/Spigot, execute block changes on the main thread
+                for (String locString : locations) {
                     try {
                         Location location = deserializeLocation(world, locString);
                         
@@ -262,7 +417,7 @@ public class DebrisStorage {
                         // Only restore if the block is still Netherrack
                         if (block.getType() == Material.NETHERRACK) {
                             block.setType(Material.ANCIENT_DEBRIS);
-                            restoredCount++;
+                            restoredCount.incrementAndGet();
                         }
                         
                         toRemove.add(locString);
@@ -271,69 +426,17 @@ public class DebrisStorage {
                         toRemove.add(locString); // Remove invalid locations
                     }
                 }
-                
-                // Remove restored locations
-                entry.getValue().removeAll(toRemove);
-            }
-        }
-        
-        // Save changes
-        saveStorage();
-        
-        plugin.getLogger().info("Restored " + restoredCount + " Ancient Debris blocks");
-        return restoredCount;
-    }
-    
-    /**
-     * Restores Ancient Debris in a specific world
-     * @param world The world to restore Ancient Debris in
-     * @return The number of blocks restored
-     */
-    public int restoreDebrisInWorld(World world) {
-        if (world == null) {
-            return 0;
-        }
-        
-        int restoredCount = 0;
-        UUID worldUUID = world.getUID();
-        
-        if (replacedLocations.containsKey(worldUUID)) {
-            List<String> toRemove = new ArrayList<>();
-            
-            for (String locString : replacedLocations.get(worldUUID)) {
-                try {
-                    Location location = deserializeLocation(world, locString);
-                    
-                    // Check if the chunk is loaded or should be loaded
-                    if (!isChunkLoaded(location) && !loadChunkIfNeeded(location)) {
-                        plugin.getLogger().fine("Skipping restoration at " + locString + " because chunk is not loaded");
-                        continue;
-                    }
-                    
-                    Block block = location.getBlock();
-                    
-                    // Only restore if the block is still Netherrack
-                    if (block.getType() == Material.NETHERRACK) {
-                        block.setType(Material.ANCIENT_DEBRIS);
-                        restoredCount++;
-                    }
-                    
-                    toRemove.add(locString);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Error restoring Ancient Debris at " + locString + ": " + e.getMessage());
-                    toRemove.add(locString); // Remove invalid locations
-                }
             }
             
             // Remove restored locations
             replacedLocations.get(worldUUID).removeAll(toRemove);
             
-            // Save changes
-            saveStorage();
+            // Save changes asynchronously
+            saveStorageAsync();
         }
         
-        plugin.getLogger().info("Restored " + restoredCount + " Ancient Debris blocks in world " + world.getName());
-        return restoredCount;
+        plugin.getLogger().info("Restored " + restoredCount.get() + " Ancient Debris blocks in world " + world.getName());
+        return restoredCount.get();
     }
     
     /**
@@ -464,6 +567,19 @@ public class DebrisStorage {
             return new Location(world, x, y, z);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid location format: " + locString, e);
+        }
+    }
+    
+    /**
+     * Checks if the server is running on Folia
+     * @return true if running on Folia, false otherwise
+     */
+    private boolean checkFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 } 
