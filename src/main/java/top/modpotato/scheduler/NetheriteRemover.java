@@ -134,7 +134,7 @@ public class NetheriteRemover {
                     schedulePlayerTask(player, delay);
                 }
             }
-        }, delay, delay);
+        }, 1, delay);
     }
     
     /**
