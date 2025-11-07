@@ -2,7 +2,7 @@
 
 AntiNetherite is a highly configurable Minecraft plugin designed to remove Netherite items from player inventories and prevent their crafting, equipping, and attacking with Netherite items. Every aspect of the plugin can be enabled, disabled, or fine-tuned to suit your server's needs.
 
-The plugin offers both destructive and non-destructive modes. In destructive mode (default), it will remove items from inventories and delete dropped items. In non-destructive mode, it will only prevent the use of Netherite items without destroying them, making it more player-friendly while still enforcing the server rules.
+The plugin operates in **non-destructive mode by default** (`enable-destructive-actions: false`). In non-destructive mode, it will only prevent the use of Netherite items without destroying them, making it player-friendly while still enforcing server rules. You can switch to destructive mode by setting `enable-destructive-actions: true`, which will remove items from inventories and delete dropped items.
 
 ## Features
 
@@ -15,7 +15,6 @@ The plugin offers both destructive and non-destructive modes. In destructive mod
 - Prevents picking up Netherite items
 - Removes dropped Netherite items
 - Prevents moving Netherite items in inventories
-- Blocks automated container (hopper) transfers of Netherite items (configurable, disabled by default due to performance impact)
 - Blocks automated container (hopper) transfers of Netherite items (configurable, disabled by default due to performance impact)
 - Replaces Ancient Debris with Netherrack when mined or generated
 - **Performance-Optimized** - Control whether replaced Ancient Debris is restored on plugin disable
@@ -231,6 +230,7 @@ The plugin provides comprehensive commands to manage all settings in-game withou
 
 - `/antinetherite reload` - Reload the configuration
 - `/antinetherite restore-debris [world]` - Restore all replaced Ancient Debris (optionally in a specific world)
+- `/antinetherite restore-feedback <on|off>` - Toggle restoration progress feedback (players only)
 - `/antinetherite debris-info` - Show information about stored Ancient Debris locations
 - `/antinetherite get <setting>` - Get a configuration value
 - `/antinetherite set <setting> <value>` - Set a configuration value
@@ -244,7 +244,6 @@ Every setting in the configuration file can be adjusted through these commands. 
 - `inventory.clear` - Enable/disable clearing Netherite from inventories (true/false)
 - `inventory.cancel-move` - Enable/disable preventing inventory movement of Netherite items (true/false)
 - `inventory.cancel-container-transfer` - Enable/disable blocking automated hopper/container transfers of Netherite items (true/false, disabled by default due to performance impact)
- - `inventory.cancel-container-transfer` - Enable/disable blocking automated hopper/container transfers of Netherite items (true/false)
 
 **Interaction settings:**
 - `interaction.cancel-craft` - Enable/disable canceling Netherite crafting (true/false)
@@ -313,8 +312,10 @@ You can toggle between these methods using the `detection.use-name-matching` set
 The plugin can prevent players from using Netherite items in several ways:
 
 1. **Destructive vs. Non-Destructive Mode**: The global setting `enable-destructive-actions` controls how the plugin handles Netherite items:
-   - In destructive mode (default), items are removed from inventories and deleted when dropped
-   - In non-destructive mode, events are cancelled but items are not destroyed, making it more player-friendly
+   - **Non-destructive mode (default, `enable-destructive-actions: false`)**: Events are cancelled but items are not destroyed, making it player-friendly while still preventing Netherite usage
+   - **Destructive mode (`enable-destructive-actions: true`)**: Items are removed from inventories and deleted when dropped for stricter enforcement
+   
+   To switch modes, use the command: `/antinetherite set global.enable-destructive-actions <true|false>` or edit the configuration file
 
 2. **Inventory Protection**: The plugin can prevent players from having Netherite items in their inventory:
    - Clear items from player inventories periodically
@@ -347,6 +348,38 @@ The plugin keeps track of all Ancient Debris that has been replaced with Netherr
 - `performance.restore-debris-on-config-change`: Controls whether Ancient Debris is restored when configuration changes
 
 You can also manually restore all replaced Ancient Debris using the `/antinetherite restore-debris` command.
+
+### Restoration Progress Reporting
+
+When restoring Ancient Debris using the `/antinetherite restore-debris` command, the plugin provides comprehensive progress feedback with a blended reporting system:
+
+1. **Immediate Scheduling Summary**: When you execute the restore command, you immediately receive a summary showing:
+   - Number of chunks scheduled for restoration
+   - Total number of Ancient Debris locations to restore
+   - Target world (if restoring a specific world)
+
+2. **Periodic Progress Updates**: During the restoration process, you receive automatic progress updates based on:
+   - **Time-based updates**: Every 60 seconds, showing elapsed time
+   - **Percentage-based updates**: At regular percentage intervals
+     - For large restorations (≥1000 locations): Updates every 1%
+     - For smaller restorations (<1000 locations): Updates every 10%
+   
+   Each update shows:
+   - Current progress (completed/total locations)
+   - Completion percentage
+   - Elapsed time in a human-readable format
+
+3. **Final Completion Message**: When restoration completes, you receive a final summary with:
+   - Total number of Ancient Debris blocks restored
+   - Total time taken for the restoration
+
+4. **Feedback Control**: Players can control whether they receive these progress updates using:
+   - `/antinetherite restore-feedback on` - Enable restoration progress updates (default)
+   - `/antinetherite restore-feedback off` - Disable restoration progress updates
+   
+   Note: Console users always receive updates and cannot opt out.
+
+This blended approach ensures you stay informed about long-running restoration operations without being overwhelmed by excessive messages.
 
 ### Performance Considerations
 
